@@ -6,11 +6,11 @@
 	.global quotient
 	.global remainder
 
-prompt:		.string "Your prompts are placed here", 0 
-dividend: 	.string "Place holder string for your dividend", 0
-divisor:  	.string "Place holder string for your divisor", 0
-quotient:	.string "Your remainder is stored here", 0
-remainder:	.string "Your remainder is stored here", 0
+prompt:		.string "Integer Division", 0 
+dividend: 	.string "Enter dividend (-32,768 through 32,767)", 0
+divisor:  	.string "Enter divisor (-32,768 through 32,767)", 0
+quotient:	.string "Your quotient is:", 0
+remainder:	.string "Your remainder is:", 0
 
 	.text
 	.global lab3
@@ -33,6 +33,69 @@ lab3:
 	ldr r7, ptr_to_quotient
 	ldr r8, ptr_to_remainder
 
+	MOV r0, r4 ; send first prompt
+	BL output_string
+
+	; dividend
+
+	MOV r0, r5 ; send second prompt (dividend)
+	BL output_string
+
+	; check for q to quit
+	LDRB r0, [r5] ; check first character of dividend string
+	CMP r0, #0x71 ; ASCII 'q'
+	BEQ lab3_end ; if 'q', end program
+
+	MOV r0, r5 ; read dividend into r0
+	BL read_string
+
+	; check for q to quit
+	LDRB r0, [r5] ; check first character of dividend string
+	CMP r0, #0x71 ; ASCII 'q'
+	BEQ lab3_end ; if 'q', end program
+
+	BL string2int ; convert dividend to integer in r0
+	MOV r9, r0 ; save dividend in r9
+
+	; divisor
+
+	MOV r0, r6 ; send third prompt (divisor)
+	BL output_string
+
+	MOV r0, r6 ; read divisor into r0
+	BL read_string
+
+	BL string2int ; convert divisor to integer in r0
+	MOV r10, r0 ; save divisor in r10
+
+	; perform division
+	SDIV r11, r9, r10 ; quotient in r11
+	; signed div in reference card kinda cheated, couuld just use what we made already
+
+	; get remainder
+	MUL r12, r11, r10 ; r12 = quotient * divisor
+	SUB r12, r9, r12 ; r12 = dividend - (quotient * divisor) = remainder
+
+	; display quotient
+	MOV r0, r7 ; send fourth prompt (quotient)
+	BL output_string
+
+	MOV r0, r11 ; convert quotient to string in r0
+	BL int2string
+
+	BL output_string ; display quotient
+
+	; display remainder
+	MOV r0, r8 ; send fifth prompt (remainder)
+	BL output_string
+
+	MOV r0, r12 ; convert remainder to string in r0
+	BL int2string
+
+	BL output_string ; display remainder
+
+	B lab3_end ;end
+
 	; Your code is placed here.  This is your main routine for
 	; Lab #3.  This should call your other routines such as
 	; uart_init, read_string, output_string, int2string, &
@@ -53,34 +116,110 @@ uart_init:
 						; that are used in your routine.  Include lr if this 
 						; routine calls another routine.
 	
-		; Your code for your uart_init routine is placed here
+	; tried to copy over the C code
+	; this will most likely not work!
+
+	; /* Provide clock to UART0  */
+	MOV r4, #0xE618
+	MOVT r4, #0x400F
+	MOV r5, #1
+	STR r5, [r4]
+
+wait_uart:
+	MOV r4, #0xEA18
+	MOVT r4, #0x400F
+	LDR r6, [r4]
+	AND r6, r6, #1
+	CMP r6, #0
+	BEQ wait_uart
+
+	; enable clock to PortA
+	MOV r4, #0xE608
+	MOVT r4, #0x400F
+	MOV r5, #1
+	STR r5, [r4]
+
+	;Disable UART0
+	MOV r4, #0xC030
+	MOVT r4, #0x4000
+	MOV r5, #0
+	STR r5, [r4]
+
+	; Set IBRD = 8
+	MOV r4, #0xC024
+	MOVT r4, #0x4000
+	MOV r5, #8
+	STR r5, [r4]
+
+	; Set FBRD = 44
+	MOV r4, #0xC028
+	MOVT r4, #0x4000
+	MOV r5, #44
+	STR r5, [r4]
+
+	; Use system clock
+	MOV r4, #0xCFC8
+	MOVT r4, #0x4000
+	MOV r5, #0
+	STR r5, [r4]
+
+	; 8-bit, 1 stop, no pairity
+	MOV r4, #0xC02C
+	MOVT r4, #0x4000
+	MOV r5, #0x60
+	STR r5, [r4]
+
+	; Enable UART0
+	MOV r4, #0xC030
+	MOVT r4, #0x4000
+	MOV r5, #0x301
+	STR r5, [r4]
+
+	; digital enable PA0
+	MOV r4, #0x451C
+	MOVT r4, #0x4000
+	LDR r6, [r4]
+	ORR r6, r6, #0x03
+	STR r6, [r4]
+
+	; alternate function
+	MOV r4, #0x4420
+	MOVT r4, #0x4000
+	LDR r6, [r4]
+	ORR r6, r6, #0x03
+	STR r6, [r4]
+
+	; configure PA0
+	MOV r4, #0x452C
+	MOVT r4, #0x4000
+	LDR r6, [r4]
+	ORR r6, r6, #0x11
+	STR r6, [r4]
 
 	POP {r4-r12,lr}   	; Restore registers all registers preserved in the 
 						; PUSH at the top of this routine from the stack.
 	mov pc, lr
 
 
-read_character:  
-	PUSH {r4-r12,lr} 	; Store any registers in the range of r4 through r12
-						; that are used in your routine.  Include lr if this 
-						; routine calls another routine.
-	
-		; Your code for your read_character routine is placed here
+read_character:
+	PUSH {r4-r12,lr} 	; Store registers r4 through r12 and lr to the
+
+	; copied read_character from part 1
 
 	MOV r1, #0xC000
-	MOVT r1, #0x4000  	; Load base address of UART0 using MOV/MOVT
+	MOVT r1, #0x4000 ; Load base address of UART0
 
 wait_rxfe:
-	LDR r2, [r1, #0x18] ; Read UART0 Flag Register (offset 0x18)
+	LDR r2, [r1, #0x18] ; Read UART0 Flag Register
 
-	AND r3, r2, #0x10   ; Check if Receive FIFO is Empty (bit 4)
+	; Check if Receive FIFO is empty
+	AND r3, r2, #0x10
 	CMP r3, #0x10
-	BEQ wait_rxfe
-	
-	LDR r0, [r1, #0x00] ; Receive FIFO has data, read character from Data Register
+	BEQ wait_rxfe 	; If bit 4 is set (FIFO Empty), continue waiting
 
-	POP {r4-r12,lr}   	; Restore registers all registers preserved in the 
-						; PUSH at the top of this routine from the stack.
+	LDRB r0, [r1]
+
+	POP {r4-r12,lr}	; Restore registers r4 through r12 and lr from the
 	mov pc, lr
 
 
@@ -136,33 +275,27 @@ read_done:
 	mov pc, lr
 
 
-output_character:  
-	PUSH {r4-r12,lr} 	; Store any registers in the range of r4 through r12
-						; that are used in your routine.  Include lr if this 
-						; routine calls another routine.
-	
-		; Your code for your output_character routine is placed here
+output_character:
+	PUSH {r4-r12,lr} 	; Store registers r4 through r12 and lr to the
 
-	MOV r4, r0     ; Save the character to transmit
-	
-	MOV r1, #0xC000
-	MOVT r1, #0x4000    ; Load base address of UART0 using MOV/MOVT
+	; copied output_character from part 1
 
-wait_txff:
-	LDR r2, [r1, #0x18]   ; Read UART0 Flag Register (offset 0x18)
-	
-	AND r3, r2, #0x20    ; Check if Transmit FIFO is Full (bit 5)
-	CMP r3, #0x20
-	BEQ wait_txff
-	
-	STR r4, [r1, #0x00]  ; Transmit FIFO is not full, write character
-	
-	POP {r1-r4,lr}
-	MOV pc, lr
+	MOV r4, #0xC000
+	MOVT r4, #0x4000
 
-	POP {r4-r12,lr}   	; Restore registers all registers preserved in the 
-						; PUSH at the top of this routine from the stack.
+check_txff:
+	LDR r1, [r4, #0x18] ;read flag register
+
+	AND r1, r1, #0x20
+	CMP r1, #0x20
+
+	BEQ check_txff ;if full loop
+
+	STRB r0, [r4] ;store for transmit
+
+	POP {r4-r12,lr}	; Restore registers r4 through r12 and lr from the
 	mov pc, lr
+
 
 
 output_string:  
