@@ -266,9 +266,6 @@ read_done:
 	BL output_character
 	MOV r0, #10
 	BL output_character
-	
-	POP {r4-r6,lr}
-	MOV pc, lr
 
 	POP {r4-r12,lr}   	; Restore registers all registers preserved in the 
 						; PUSH at the top of this routine from the stack.
@@ -318,9 +315,6 @@ output_loop:
 	B output_loop
 	
 output_done:
-	POP {r4-r5,lr}
-	MOV pc, lr
-
 
 	POP {r4-r12,lr}   	; Restore registers all registers preserved in the 
 						; PUSH at the top of this routine from the stack.
@@ -343,16 +337,16 @@ int2string:
 	BGE i2s_positive
 	
 	; Handle negative number
-	MOV r0, #'-'
+	MOV r0, #45             ; ASCII code for '-'
 	STRB r0, [r4, r6]
 	ADD r6, r6, #1
-	NEG r5, r5              ; Make positive
-
+	RSB r5, r5, #0          ; Make positive (r5 = 0 - r5)
+	
 i2s_positive:
 	; Handle special case of 0
 	CMP r5, #0
 	BNE i2s_convert
-	MOV r0, #'0'
+	MOV r0, #48             ; ASCII '0'
 	STRB r0, [r4, r6]
 	ADD r6, r6, #1
 	B i2s_null
@@ -374,7 +368,7 @@ i2s_digit_loop:
 	MLS r3, r2, r1, r0      ; r3 = remainder (digit)
 	
 	; Convert digit to ASCII
-	ADD r3, r3, #'0'
+	ADD r3, r3, #48         ; Add '0'
 	STRB r3, [r7, r8]
 	ADD r8, r8, #1
 	
@@ -426,7 +420,7 @@ string2int:
 	
 	; Check for negative sign
 	LDRB r0, [r4, r6]
-	CMP r0, #'-'
+	CMP r0, #45             ; ASCII code for '-'
 	BNE s2i_loop
 	MOV r7, #1              ; Set negative flag
 	ADD r6, r6, #1          ; Skip '-' character
@@ -437,13 +431,13 @@ s2i_loop:
 	BEQ s2i_done
 	
 	; Check if valid digit
-	CMP r0, #'0'
+	CMP r0, #48             ; ASCII '0'
 	BLT s2i_done
-	CMP r0, #'9'
+	CMP r0, #57             ; ASCII '9'
 	BGT s2i_done
 	
 	; Convert ASCII to digit
-	SUB r0, r0, #'0'
+	SUB r0, r0, #48         ; Subtract '0'
 	
 	; result = result * 10 + digit
 	MOV r1, #10
@@ -457,10 +451,10 @@ s2i_done:
 	; Apply negative if needed
 	CMP r7, #1
 	BNE s2i_return
-	NEG r5, r5
+	RSB r5, r5, #0          ; Negate (r5 = 0 - r5)
 	
 s2i_return:
-	MOV r0, r5         	; Return result in r0
+	MOV r0, r5          ; Return result in r0
 	POP {r4-r12,lr}   	; Restore registers all registers preserved in the 
 						; PUSH at the top of this routine from the stack.
 	mov pc, lr
