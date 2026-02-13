@@ -51,6 +51,7 @@ lab3:
 	;CMP r0, #0x71 ; ASCII 'q'
 	;BEQ lab3_end ; if 'q', end program
 
+	MOV r0, r5 ; buf
 	BL string2int ; convert dividend to integer in r0
 	MOV r9, r0 ; save dividend in r9
 
@@ -68,6 +69,7 @@ lab3:
 	CMP r0, #0x71 ; ASCII 'q'
 	BEQ lab3_end ; if 'q', end program
 
+	MOV r0, r6 ; buf
 	BL string2int ; convert divisor to integer in r0
 	MOV r10, r0 ; save divisor in r10
 
@@ -84,9 +86,11 @@ lab3:
 	BL output_string
 	BL new_line
 
+	MOV r0, r7 ; buf
 	MOV r0, r11 ; convert quotient to string in r0
 	BL int2string
 
+	MOV r0, r7 ; buf
 	BL output_string ; display quotient
 	BL new_line
 
@@ -95,6 +99,7 @@ lab3:
 	BL output_string
 	BL new_line
 
+	MOV r0, r8 ; buf
 	MOV r0, r12 ; convert remainder to string in r0
 	BL int2string
 
