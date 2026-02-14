@@ -38,71 +38,65 @@ lab3:
 	BL new_line ; new line
 
 	; dividend
-
-	MOV r0, r5 ; send second prompt (dividend)
+	MOV r0, r5 ; send second prompt 
 	BL output_string
 	BL new_line
 
-	MOV r0, #0xC000
-	MOVT r0, #0x4000 ; Load base address
+	MOV r0, #0x0000
+	MOVT r0, #0x2000 ; Load base address
 	BL read_string ; at some point load the characters we just stored into a register
-
-	; check for q to quit
-	;LDRB r0, [r5] ; check first character of dividend string
-	;CMP r0, #0x71 ; ASCII 'q'
-	;BEQ lab3_end ; if 'q', end program
 
 	BL string2int ; convert dividend to integer in r0
 	MOV r9, r0 ; save dividend in r9
 
 	; divisor
-
-	MOV r0, r6 ; send third prompt (divisor)
+	MOV r0, r6 ; send third prompt 
 	BL output_string
 	BL new_line
 
-	MOV r0, r6 ; read divisor into r0
+	MOV r0, #0x0100
+	MOVT r0, #0x2000 
 	BL read_string
-
-	; check for q to quit
-	LDRB r0, [r6] ; check first character of dividend string
-	CMP r0, #0x71 ; ASCII 'q'
-	BEQ lab3_end ; if 'q', end program
 
 	BL string2int ; convert divisor to integer in r0
 	MOV r10, r0 ; save divisor in r10
 
 	; perform division
 	SDIV r11, r9, r10 ; quotient in r11
-	; signed div in reference card kinda cheated, couuld just use what we made already
 
 	; get remainder
-	MUL r12, r11, r10 ; r12 = quotient * divisor
-	SUB r12, r9, r12 ; r12 = dividend - (quotient * divisor) = remainder
+	MUL r12, r11, r10 
+	SUB r12, r9, r12 
 
 	; display quotient
-	MOV r0, r7 ; send fourth prompt (quotient)
+	MOV r0, r7 ; send fourth prompt 
 	BL output_string
 	BL new_line
 
-	MOV r0, r11 ; convert quotient to string in r0
+	MOV r0, #0x0200
+	MOVT r0, #0x2000 ; destination address at 0x20000200 for string
+	MOV r1, r11 ; integer value 
 	BL int2string
 
+	MOV r0, #0x0200
+	MOVT r0, #0x2000
 	BL output_string ; display quotient
 	BL new_line
 
 	; display remainder
-	MOV r0, r8 ; send fifth prompt (remainder)
+	MOV r0, r8 ; send fifth prompt 
 	BL output_string
 	BL new_line
 
-	MOV r0, r12 ; convert remainder to string in r0
+	MOV r0, #0x0300
+	MOVT r0, #0x2000 ; destination address at 0x20000300 for string
+	MOV r1, r12 ; integer value 
 	BL int2string
 
+	MOV r0, #0x0300
+	MOVT r0, #0x2000
 	BL output_string ; display remainder
 	BL new_line
-
-	B lab3_end ;end
 
 	; Your code is placed here.  This is your main routine for
 	; Lab #3.  This should call your other routines such as
