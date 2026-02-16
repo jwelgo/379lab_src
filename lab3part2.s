@@ -38,7 +38,7 @@ lab3:
 	BL new_line ; new line
 
 	; dividend
-	MOV r0, r5 ; send second prompt 
+	MOV r0, r5 ; send second prompt
 	BL output_string
 	BL new_line
 
@@ -46,18 +46,22 @@ lab3:
 	MOVT r0, #0x2000 ; Load base address
 	BL read_string ; at some point load the characters we just stored into a register
 
+	MOV r0, #0x0000        ; reload address
+	MOVT r0, #0x2000
 	BL string2int ; convert dividend to integer in r0
 	MOV r9, r0 ; save dividend in r9
 
 	; divisor
-	MOV r0, r6 ; send third prompt 
+	MOV r0, r6 ; send third prompt
 	BL output_string
 	BL new_line
 
 	MOV r0, #0x0100
-	MOVT r0, #0x2000 
+	MOVT r0, #0x2000
 	BL read_string
 
+	MOV r0, #0x0000        ; reload address
+	MOVT r0, #0x2000
 	BL string2int ; convert divisor to integer in r0
 	MOV r10, r0 ; save divisor in r10
 
@@ -65,17 +69,17 @@ lab3:
 	SDIV r11, r9, r10 ; quotient in r11
 
 	; get remainder
-	MUL r12, r11, r10 
-	SUB r12, r9, r12 
+	MUL r12, r11, r10
+	SUB r12, r9, r12
 
 	; display quotient
-	MOV r0, r7 ; send fourth prompt 
+	MOV r0, r7 ; send fourth prompt
 	BL output_string
 	BL new_line
 
 	MOV r0, #0x0200
 	MOVT r0, #0x2000 ; destination address at 0x20000200 for string
-	MOV r1, r11 ; integer value 
+	MOV r1, r11 ; integer value
 	BL int2string
 
 	MOV r0, #0x0200
@@ -84,13 +88,13 @@ lab3:
 	BL new_line
 
 	; display remainder
-	MOV r0, r8 ; send fifth prompt 
+	MOV r0, r8 ; send fifth prompt
 	BL output_string
 	BL new_line
 
 	MOV r0, #0x0300
 	MOVT r0, #0x2000 ; destination address at 0x20000300 for string
-	MOV r1, r12 ; integer value 
+	MOV r1, r12 ; integer value
 	BL int2string
 
 	MOV r0, #0x0300
@@ -259,7 +263,6 @@ read_loop:
 
 read_done:
 	MOV r0, #0
-	ADD r5, r5, #1
 	STRB r0, [r4, r5] ; Add NULL terminator
 
 	; Echo newline for formatting
