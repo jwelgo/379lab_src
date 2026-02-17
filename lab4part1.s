@@ -3,7 +3,9 @@
 
 lab4:
 	PUSH {r4-r12,lr}	; Spill registers to stack
-       
+
+      ; initialize GPIO
+
 init_gpio:
 
     MOV r0, #0xE608
@@ -36,9 +38,32 @@ wait_gpio:
     MOV r1, #0x10 ; enable pull-up resistor for PF4
     STR r1, [r0, #0x510]
 
+    ; init done
+
+; logic is to just constantly read the button if not pressed r0 is 0 and the led is off
+; if it is pressed r0 is 1 and the led is on, change the color using the comments
+
 main_loop:
     BL read_tiva_push_button ; Read the state of the push button  
- 
+    CMP r0, #1 ; Check if the button is pressed
+    BNE not_pressed
+
+    ; If pressed, illuminate the RGB LED
+    MOV r0, #0x0E ; set led color
+    ; 0x02 red
+    ; 0x04 blue
+    ; 0x08 green
+    ; 0x06 purple
+    ; 0x0A yellow
+    ; 0x0E white
+    BL illuminate_RGB_LED
+    BL main_loop
+
+not_pressed:
+    MOV r0, #0x00 ; Set the value to turn off the RGB LED
+    BL illuminate_RGB_LED
+    BL main_loop
+
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
