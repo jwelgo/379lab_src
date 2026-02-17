@@ -14,6 +14,7 @@ remainder:	.string "Your remainder is:", 0
 
 	.text
 	.global lab3
+	.global uart_init
 
 U0FR: 	.equ 0x18	; UART0 Flag Register
 
@@ -38,71 +39,69 @@ lab3:
 	BL new_line ; new line
 
 	; dividend
-
-	MOV r0, r5 ; send second prompt (dividend)
+	MOV r0, r5 ; send second prompt
 	BL output_string
 	BL new_line
 
-	MOV r0, #0xC000
-	MOVT r0, #0x4000 ; Load base address
+	MOV r0, #0x0000
+	MOVT r0, #0x2000 ; Load base address
 	BL read_string ; at some point load the characters we just stored into a register
 
-	; check for q to quit
-	;LDRB r0, [r5] ; check first character of dividend string
-	;CMP r0, #0x71 ; ASCII 'q'
-	;BEQ lab3_end ; if 'q', end program
-
+	MOV r0, #0x0000        ; reload address
+	MOVT r0, #0x2000
 	BL string2int ; convert dividend to integer in r0
 	MOV r9, r0 ; save dividend in r9
 
 	; divisor
-
-	MOV r0, r6 ; send third prompt (divisor)
+	MOV r0, r6 ; send third prompt
 	BL output_string
 	BL new_line
 
-	MOV r0, r6 ; read divisor into r0
+	MOV r0, #0x0100
+	MOVT r0, #0x2000
 	BL read_string
 
-	; check for q to quit
-	LDRB r0, [r6] ; check first character of dividend string
-	CMP r0, #0x71 ; ASCII 'q'
-	BEQ lab3_end ; if 'q', end program
-
+	MOV r0, #0x0100        ; reload address
+	MOVT r0, #0x2000
 	BL string2int ; convert divisor to integer in r0
 	MOV r10, r0 ; save divisor in r10
 
 	; perform division
 	SDIV r11, r9, r10 ; quotient in r11
-	; signed div in reference card kinda cheated, couuld just use what we made already
 
 	; get remainder
-	MUL r12, r11, r10 ; r12 = quotient * divisor
-	SUB r12, r9, r12 ; r12 = dividend - (quotient * divisor) = remainder
+	MUL r12, r11, r10
+	SUB r12, r9, r12
 
 	; display quotient
-	MOV r0, r7 ; send fourth prompt (quotient)
+	MOV r0, r7 ; send fourth prompt
 	BL output_string
 	BL new_line
 
-	MOV r0, r11 ; convert quotient to string in r0
+	MOV r0, #0x0200
+	MOVT r0, #0x2000 ; destination address at 0x20000200 for string
+	MOV r1, r11 ; integer value
 	BL int2string
 
+	MOV r0, #0x0200
+	MOVT r0, #0x2000
 	BL output_string ; display quotient
 	BL new_line
 
 	; display remainder
-	MOV r0, r8 ; send fifth prompt (remainder)
+	MOV r0, r8 ; send fifth prompt
 	BL output_string
 	BL new_line
 
-	MOV r0, r12 ; convert remainder to string in r0
+	MOV r0, #0x0300
+	MOVT r0, #0x2000 ; destination address at 0x20000300 for string
+	MOV r1, r12 ; integer value
 	BL int2string
 
+	MOV r0, #0x0300
+	MOVT r0, #0x2000
 	BL output_string ; display remainder
 	BL new_line
-
-	B lab3_end ;end
 
 	; Your code is placed here.  This is your main routine for
 	; Lab #3.  This should call your other routines such as
@@ -120,93 +119,93 @@ lab3_end:
 
 
 uart_init:
-;	PUSH {r4-r12,lr} 	; Store any registers in the range of r4 through r12
-;						; that are used in your routine.  Include lr if this
-;						; routine calls another routine.
-;
-;	; tried to copy over the C code
-;	; this will most likely not work!
-;
-;	; Provide clock to UART0
-;	MOV r4, #0xE618
-;	MOVT r4, #0x400F
-;	MOV r5, #1
-;	STR r5, [r4]
-;
-;wait_uart:
-;	MOV r4, #0xEA18
-;	MOVT r4, #0x400F
-;	LDR r6, [r4]
-;	AND r6, r6, #1
-;	CMP r6, #0
-;	BEQ wait_uart
-;
-;	; enable clock to PortA
-;	MOV r4, #0xE608
-;	MOVT r4, #0x400F
-;	MOV r5, #1
-;	STR r5, [r4]
-;
+	PUSH {r4-r12,lr} 	; Store any registers in the range of r4 through r12
+						; that are used in your routine.  Include lr if this
+						; routine calls another routine.
+
+	; tried to copy over the C code
+	; this will most likely not work!
+
+	; Provide clock to UART0
+	MOV r4, #0xE618
+	MOVT r4, #0x400F
+	MOV r5, #1
+	STR r5, [r4]
+
+wait_uart:
+	MOV r4, #0xEA18
+	MOVT r4, #0x400F
+	LDR r6, [r4]
+	AND r6, r6, #1
+	CMP r6, #0
+	BEQ wait_uart
+
+	; enable clock to PortA
+	MOV r4, #0xE608
+	MOVT r4, #0x400F
+	MOV r5, #1
+	STR r5, [r4]
+
 	; Disable UART0
-;	MOV r4, #0xC030
-;	MOVT r4, #0x4000
-;	MOV r5, #0
-;	STR r5, [r4]
-;
-;	; Set IBRD = 8
-;	MOV r4, #0xC024
-;	MOVT r4, #0x4000
-;	MOV r5, #8
-;	STR r5, [r4]
-;
-;	; Set FBRD = 44
-;	MOV r4, #0xC028
-;	MOVT r4, #0x4000
-;	MOV r5, #44
-;	STR r5, [r4]
-;
-;	; Use system clock
-;	MOV r4, #0xCFC8
-;	MOVT r4, #0x4000
-;	MOV r5, #0
-;	STR r5, [r4]
-;
-;	; 8-bit, 1 stop, no pairity
-;	MOV r4, #0xC02C
-;	MOVT r4, #0x4000
-;	MOV r5, #0x60
-;	STR r5, [r4]
-;
-;	; Enable UART0
-;	MOV r4, #0xC030
-;	MOVT r4, #0x4000
-;	MOV r5, #0x301
-;	STR r5, [r4]
-;
-;	; digital enable PA0
-;	MOV r4, #0x451C
-;	MOVT r4, #0x4000
-;	LDR r6, [r4]
-;	ORR r6, r6, #0x03
-;	STR r6, [r4]
-;
-;	; alternate function
-;	MOV r4, #0x4420
-;	MOVT r4, #0x4000
-;	LDR r6, [r4]
-;	ORR r6, r6, #0x03
-;	STR r6, [r4]
-;
-;	; configure PA0
-;	MOV r4, #0x452C
-;	MOVT r4, #0x4000
-;	LDR r6, [r4]
-;	ORR r6, r6, #0x11
-;	STR r6, [r4]
-;
-;	POP {r4-r12,lr}   	; Restore registers all registers preserved in the
-;						; PUSH at the top of this routine from the stack.
-;	mov pc, lr
+	MOV r4, #0xC030
+	MOVT r4, #0x4000
+	MOV r5, #0
+	STR r5, [r4]
+
+	; Set IBRD = 8
+	MOV r4, #0xC024
+	MOVT r4, #0x4000
+	MOV r5, #8
+	STR r5, [r4]
+
+	; Set FBRD = 44
+	MOV r4, #0xC028
+	MOVT r4, #0x4000
+	MOV r5, #44
+	STR r5, [r4]
+
+	; Use system clock
+	MOV r4, #0xCFC8
+	MOVT r4, #0x4000
+	MOV r5, #0
+	STR r5, [r4]
+
+	; 8-bit, 1 stop, no pairity
+	MOV r4, #0xC02C
+	MOVT r4, #0x4000
+	MOV r5, #0x60
+	STR r5, [r4]
+
+	; Enable UART0
+	MOV r4, #0xC030
+	MOVT r4, #0x4000
+	MOV r5, #0x301
+	STR r5, [r4]
+
+	; digital enable PA0
+	MOV r4, #0x451C
+	MOVT r4, #0x4000
+	LDR r6, [r4]
+	ORR r6, r6, #0x03
+	STR r6, [r4]
+
+	; alternate function
+	MOV r4, #0x4420
+	MOVT r4, #0x4000
+	LDR r6, [r4]
+	ORR r6, r6, #0x03
+	STR r6, [r4]
+
+	; configure PA0
+	MOV r4, #0x452C
+	MOVT r4, #0x4000
+	LDR r6, [r4]
+	ORR r6, r6, #0x11
+	STR r6, [r4]
+
+	POP {r4-r12,lr}   	; Restore registers all registers preserved in the
+						; PUSH at the top of this routine from the stack.
+	mov pc, lr
 
 
 read_character:
@@ -265,7 +264,6 @@ read_loop:
 
 read_done:
 	MOV r0, #0
-	ADD r5, r5, #1
 	STRB r0, [r4, r5] ; Add NULL terminator
 
 	; Echo newline for formatting
@@ -385,7 +383,7 @@ i2s_digit_loop:
 
 i2s_reverse:
 	; Reverse the digits
-	MOV r9, #0              ; Left index
+	MOV r9, #1              ; Left index, offset by 1
 i2s_rev_loop:
 	CMP r9, r8
 	BGE i2s_reversed
