@@ -23,6 +23,7 @@ ptr_to_divisor:		.word divisor
 ptr_to_quotient:	.word quotient
 ptr_to_remainder:	.word remainder
 
+
 lab3:
 	PUSH {r4-r12,lr} 	; Store any registers in the range of r4 through r12
 						; that are used in your routine.  Include lr if this
@@ -74,6 +75,15 @@ lab3:
 	MUL r12, r11, r10
 	SUB r12, r9, r12
 
+	CMP r9, #0
+	BGE skip_null_remainder
+
+	CMP r10, #0
+	BGE skip_null_remainder
+
+	MOV r12, #0x00 ; make remainder NULL
+
+skip_null_remainder:
 	; display quotient
 	MOV r0, r7 ; send fourth prompt
 	BL output_string
@@ -103,6 +113,10 @@ lab3:
 	MOVT r0, #0x2000
 	BL output_string ; display remainder
 	BL new_line
+
+	POP {r4-r12,lr}
+	B lab3
+
 
 	; Your code is placed here.  This is your main routine for
 	; Lab #3.  This should call your other routines such as
@@ -259,7 +273,7 @@ read_loop:
 
 	; Check for comma - ignore it
 	CMP r0, #44
-	BEQ read_loop           ; Skip comma, don't store or echo
+	BEQ detect_comma           ; Skip comma, don't store
 
 	; Echo the character
 	BL output_character
@@ -268,6 +282,10 @@ read_loop:
 	STRB r0, [r4, r5]
 	ADD r5, r5, #1
 
+	B read_loop
+
+detect_comma:
+	BL output_character
 	B read_loop
 
 read_done:
