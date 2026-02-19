@@ -293,7 +293,17 @@ output_done:
 read_from_push_btns: 
 	PUSH {r4-r12,lr}	; Spill registers to stack
     
-          ; Your code is placed here
+    ; load port E base address
+    MOV r0, #0x4000
+    MOVT r0, #0x4002
+
+    ; read the value of the push buttons
+    LDR r0, [r1, #0x3FC] ; Read the value of the push buttons
+    
+    ; mask the bits for PE2-PE5
+    AND r0, r0, #0x3C
+
+    LSR r0, r0, #2 ; Shift right to align
  
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
@@ -301,7 +311,14 @@ read_from_push_btns:
 illuminate_LEDs: 
 	PUSH {r4-r12,lr}	; Spill registers to stack
     
-          ; Your code is placed here
+    ; need to find out what ports the leds are
+    ; load port B base address
+    MOV r1, #0x5000
+    MOVT r1, #0x4000
+
+    AND r0, r0, #0x0F ; Mask the bits for PB0-PB3
+
+    STR r0, [r1, #0x3FC] ; Write the value to the LED pins (PB0-3)
  
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
@@ -309,8 +326,26 @@ illuminate_LEDs:
 illuminate_RGB_LED: 
 	PUSH {r4-r12,lr}	; Spill registers to stack
     
-          ; Your code is placed here
- 
+    ; format
+    ; bit 0 = red
+    ; bit 1 = blue
+    ; bit 2 = green
+
+    
+    MOV r1, #0x5000
+    MOVT r1, #0x4002 ; PORT F Base Address
+
+    AND r0, r0, #0x07
+
+    LSL r0, r0, #1 ; Shift left to align with PF1-PF3
+
+    LDR r2, [r1, #0x3FC] ; Read current state of LEDs
+    AND r2, r2, #0xF8 ; Clear bits for PF1
+
+    ORR r2, r2, r0 ; Set new LED state
+
+    STR r2, [r1, #0x3FC] ; Write the value to the LED pins (PF1-3)
+
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
