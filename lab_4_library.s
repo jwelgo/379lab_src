@@ -7,7 +7,7 @@
 	.global output_string
 	.global read_from_push_btns
 	.global illuminate_LEDs
-	.global illuminate_RGB_LED  
+	.global illuminate_RGB_LED
 	.global read_tiva_push_button
 	.global str2int
 	.global int2str
@@ -107,13 +107,13 @@ wait_gpioa:
     MOVT r4, #0x4000
     MOV r5, #0x301
     STR r5, [r4]
- 
+
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
-gpio_btn_and_LED_init: 
+gpio_btn_and_LED_init:
 	PUSH {r4-r12,lr}	; Spill registers to stack
-    
+
 init_gpio:
 
     MOV r0, #0xE608
@@ -159,17 +159,19 @@ gpio_wait_loop:
     MOV r1, #0x0F ; enable PB0-3
     STR r1, [r0, #0x51C]
 
-    ; port E init
-    MOV r0, #0x4000
-    MOVT r0, #0x4002 ; PORT E Base Address
+    ; port D init
+    ; switch 2 is pin 3
+    ; switch 5 is pin 0
+    MOV r0, #0x7000
+    MOVT r0, #0x4000 ; PORT D Base Address
 
-    MOV r1, #0x0F ; Set the direction of the pins (PE0-3 as output)
+    MOV r1, #0x0F ; Set the direction of the pin
     STR r1, [r0, #0x510] ; Write to the GPIODIR register
 
     ; digital
-    MOV r1, #0x0F ; enable PE0-3
+    MOV r1, #0x0F ; enable
     STR r1, [r0, #0x510]
- 
+
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
@@ -290,27 +292,27 @@ output_done:
 						; PUSH at the top of this routine from the stack.
 	mov pc, lr
 
-read_from_push_btns: 
+read_from_push_btns:
 	PUSH {r4-r12,lr}	; Spill registers to stack
-    
+
     ; load port E base address
     MOV r0, #0x4000
     MOVT r0, #0x4002
 
     ; read the value of the push buttons
     LDR r0, [r1, #0x3FC] ; Read the value of the push buttons
-    
+
     ; mask the bits for PE2-PE5
     AND r0, r0, #0x3C
 
     LSR r0, r0, #2 ; Shift right to align
- 
+
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
-illuminate_LEDs: 
+illuminate_LEDs:
 	PUSH {r4-r12,lr}	; Spill registers to stack
-    
+
     ; need to find out what ports the leds are
     ; load port B base address
     MOV r1, #0x5000
@@ -319,39 +321,42 @@ illuminate_LEDs:
     AND r0, r0, #0x0F ; Mask the bits for PB0-PB3
 
     STR r0, [r1, #0x3FC] ; Write the value to the LED pins (PB0-3)
- 
+
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
-illuminate_RGB_LED: 
+illuminate_RGB_LED:
 	PUSH {r4-r12,lr}	; Spill registers to stack
-    
+
     ; format
     ; bit 0 = red
     ; bit 1 = blue
     ; bit 2 = green
 
-    
+	; in decimal
+	; 0 = off
+	; 1 = red
+	; 2 = blue
+	; 4 = green
+	; 3 = purple
+	; 6 = yellow
+	; 7 = white
+
     MOV r1, #0x5000
     MOVT r1, #0x4002 ; PORT F Base Address
 
-    AND r0, r0, #0x07
+    AND r0, r0, #0x07 ; remove all but last 3 bits
 
     LSL r0, r0, #1 ; Shift left to align with PF1-PF3
 
-    LDR r2, [r1, #0x3FC] ; Read current state of LEDs
-    AND r2, r2, #0xF8 ; Clear bits for PF1
-
-    ORR r2, r2, r0 ; Set new LED state
-
-    STR r2, [r1, #0x3FC] ; Write the value to the LED pins (PF1-3)
+    STR r0, [r1, #0x3FC] ; Write the value to the LED pins PF1-3
 
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
-read_tiva_push_button: 
+read_tiva_push_button:
 	PUSH {r4-r12,lr}	; Spill registers to stack
-    
+
     ; r0 = 1 if pressed, 0 if not pressed
 
     MOV r1, #0x5000
@@ -365,7 +370,7 @@ read_tiva_push_button:
 
     MOV r0, #0 ; SW1 not pressed
     B sw1_end
- 
+
 sw1_pressed:
     MOV r0, #1 ; SW1 pressed
 
@@ -511,27 +516,27 @@ i2s_null:
 						; PUSH at the top of this routine from the stack.
 	mov pc, lr
 
-unsigned_division: 
+unsigned_division:
 	PUSH {r4-r12,lr}	; Spill registers to stack
-    
+
           ; Your code is placed here
- 
+
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
-signed_division: 
+signed_division:
 	PUSH {r4-r12,lr}	; Spill registers to stack
-    
+
           ; Your code is placed here
- 
+
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
-mod: 
+mod:
 	PUSH {r4-r12,lr}	; Spill registers to stack
-    
+
           ; Your code is placed here
- 
+
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
 
