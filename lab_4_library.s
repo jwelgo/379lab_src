@@ -14,6 +14,7 @@
 	.global unsigned_division
 	.global signed_division
 	.global mod
+	.global new_line
 
 
 uart_init:
