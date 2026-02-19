@@ -51,7 +51,27 @@ main_loop:
     ; If pressed, illuminate the RGB LED
 	; TODO
 
-	MOV r1, #1 ; set red to 1
+	MOV r0, #1 ; set red to 1
+	BL illuminate_RGB_LED
+	NOP
+	NOP
+	MOV r0, #2
+	BL illuminate_RGB_LED
+	NOP
+	NOP
+	MOV r0, #4
+	BL illuminate_RGB_LED
+	NOP
+	NOP
+	MOV r0, #3
+	BL illuminate_RGB_LED
+	NOP
+	NOP
+	MOV r0, #5
+	BL illuminate_RGB_LED
+	NOP
+	NOP
+	MOV r0, #7
     BL illuminate_RGB_LED
     BL main_loop
 
@@ -67,21 +87,28 @@ not_pressed:
 illuminate_RGB_LED:
 	PUSH {r4-r12,lr}	; Spill registers to stack
 
-    MOV r0, #0x5000
-    MOVT r0, #0x4002 ; PORT F Base Address
+    ; format
+    ; bit 0 = red
+    ; bit 1 = blue
+    ; bit 2 = green
 
-    MOV r4, #0x3FC
+	; in decimal
+	; 0 = off
+	; 1 = red
+	; 2 = blue
+	; 4 = green
+	; 3 = purple
+	; 5 = yellow
+	; 7 = white
 
-	; r1 = red
-	; r2 = blue
-	; r3 = green
+    MOV r1, #0x5000
+    MOVT r1, #0x4002 ; PORT F Base Address
 
-    STRB r1, [r0, r4], #32 ; pin 1
-    STRB r2, [r0, r4], #32 ; pin 2?
-    STRB r3, [r0, r4]	; pin 3?
+    AND r0, r0, #0x07 ; remove all but last 3 bits
 
-    ; TODO
-    ; confirm that that is right
+    LSL r0, r0, #1 ; Shift left to align with PF1-PF3
+
+    STR r0, [r1, #0x3FC] ; Write the value to the LED pins PF1-3
 
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
