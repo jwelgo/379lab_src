@@ -50,7 +50,6 @@ lab4:
 
 	BL uart_init ; init uart
 
-restart:
 	LDR r4, ptr_to_prompt_l1 ; load first prompt
 	MOV r0, r4 ; send prompt
 	BL output_string ; print prompt
@@ -81,6 +80,7 @@ restart:
 	BL output_string ; print prompt
 	BL new_line ; new line
 
+restart:
 	LDR r4, ptr_to_prompt_l7 ; load seventh prompt
 	MOV r0, r4 ; send prompt
 	BL output_string ; print prompt
@@ -119,7 +119,7 @@ restart:
 	CMP r5, r9
 	BL illuminate_RGB_LED
 
-invalid_input:
+exit_prompt:
 	LDR r4, ptr_to_prompt_l8 ; load eighth prompt
 	MOV r0, r4 ; send prompt
 	BL output_string ; print prompt
@@ -152,7 +152,7 @@ invalid_input:
 	BL output_string ; print prompt
 	BL new_line ; new line
 
-	B invalid_input
+	B exit_prompt
 
 invalid:
 	LDR r4, ptr_to_prompt_l0 ; load default prompt
