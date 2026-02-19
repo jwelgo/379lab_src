@@ -339,7 +339,7 @@ illuminate_RGB_LED:
 	; 2 = blue
 	; 4 = green
 	; 3 = purple
-	; 6 = yellow
+	; 5 = yellow
 	; 7 = white
 
     MOV r1, #0x5000
@@ -353,6 +353,7 @@ illuminate_RGB_LED:
 
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
+
 
 read_tiva_push_button:
 	PUSH {r4-r12,lr}	; Spill registers to stack
