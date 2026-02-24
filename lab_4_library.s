@@ -535,50 +535,113 @@ i2s_null:
 	mov pc, lr
 
 unsigned_division:
-	PUSH {r4-r12,lr}	; Spill registers to stack
+    PUSH {r4-r12,lr}        ; Store registers r4 through r12 and lr on the						
+                            ; stack. Do NOT modify this line of code.  It 
+                            ; ensures that the return address is preserved 
+                            ; so that a proper return to the C wrapped can be 
+                            ; executed.
+			
+	; Your code for the unsigned_division routine goes here. 
 
-    ;place holder for unsigned div
-	UDIV r0, r1, r0
+    MOV r4, #15             ; Set counter = 15
+    MOV r5, #0              ; Set quotient = 0
+    LSL r0, r0, #15         ; Shift divisor left 15
+    MOV r6, r1              ; Set remainder = dividend 
+    
+unsigned_division_loop:   
+    SUB r6, r6, r0          ; Subtract: remainder = remainder - divisior
+    CMP r6, #0      
+    BLT unsigned_neg        ; If remainder < 0, fix it
 
-	POP {r4-r12,lr}  	; Restore registers from stack
+    ; Remainder >= 0, quotient LSB -> 1
+    LSL r5, r5, #1          ; Shift quotient left
+    ORR r5, r5, #1          ; Set LSB to 1
+    B unsigned_next         ; Skip negative path
+
+unsigned_neg:
+    ADD r6, r6, r0          ; Undo subtraction: remainder += divisor
+    LSL r5, r5, #1          ; Shift quotient left (LSB stays 0)
+
+unsigned_next:
+    LSR r0, r0, #1          ; Shift divisor right
+    SUB r4, r4, #1          ; Decrement counter
+    CMP r4, #0
+    BGT unsigned_division_loop  ; If counter > 0, loop
+
+    MOV r0, r5              ; Move quotient into r0 for return
+    MOV r1, r6              ; Move remainder into r1 for a mod call
+
+	POP {r4-r12,lr}         ; Restore registers r4 through r12 and lr from 
+                            ; the stack. Do NOT modify this line of code.  
+                            ; It ensures that the return address is preserved 
+                            ; so that a proper return to the C wrapped can be 
+                            ; executed.
+	
+    ; The following line is used to return from the subroutine 
+    ; and should be the last line in your subroutine.
+	
 	MOV pc, lr
 
 signed_division:
-	PUSH {r4-r12,lr}	; Spill registers to stack
+	PUSH {r4-r12,lr}        ; Store registers r4 through r12 and lr on the						
+                            ; stack. Do NOT modify this line of code.  It 
+                            ; ensures that the return address is preserved 
+                            ; so that a proper return to the C wrapped can be 
+                            ; executed.
+			
+    ; Your code for the signed_division routine goes here.  
 
-	;place holder for signed div
-	SDIV r0, r1, r0
+    LSR r7, r0, #31         ; Grab sign of dividend
+    LSR r8, r1, #31         ; Grab sign of divisor
 
-	POP {r4-r12,lr}  	; Restore registers from stack
+    BL unsigned_division    ; Call unsigned_division subroutine 
+
+    CMP r7, r8  
+    BNE negate_quotient     ; Negate the quotient if signs do not match,
+    B signed_next           ; Skip negation
+
+negate_quotient:
+    MOV r9, 0xFFFF          ; Load Lower half of bitmask
+    MOVT r9, 0xFFFF         ; Load upperhalf of butmask
+    EOR r0, r0, r9          ; Perform one's complement
+    ADD r0, r0, #1          ; Add 1 (two's complement)    
+
+signed_next: 
+	POP {r4-r12,lr}         ; Restore registers r4 through r12 and lr from 
+                            ; the stack. Do NOT modify this line of code.  
+                            ; It ensures that the return address is preserved 
+                            ; so that a proper return to the C wrapped can be 
+                            ; executed.
+	
+	; The following line is used to return from the subroutine 
+	; and should be the last line in your subroutine.
+	
 	MOV pc, lr
+
 
 mod:
-	PUSH {r4-r12,lr}	; Spill registers to stack
+	PUSH {r4-r12,lr}        ; Store registers r4 through r12 and lr on the						
+                            ; stack. Do NOT modify this line of code.  It 
+                            ; ensures that the return address is preserved 
+                            ; so that a proper return to the C wrapped can be 
+                            ; executed.
+			
+	; Your code for the mod routine goes here.  
 
-    ;place holder for mod
-	MOV r4, r0 ;temp divisior
-	MOV r5, r1 ;temp dividend
-	SDIV r0, r1, r0
-	MUL r0, r0, r4
+    BL unsigned_division    ; Call unsigned_division subroutine 
+
+    MOV r0, r1              ; Move remainder into r0 for return
+
+	POP {r4-r12,lr}         ; Restore registers r4 through r12 and lr from 
+                            ; the stack. Do NOT modify this line of code.  
+                            ; It ensures that the return address is preserved 
+                            ; so that a proper return to the C wrapped can be 
+                            ; executed.
 	
-	SUB r0, r5, r0
-
-	POP {r4-r12,lr}  	; Restore registers from stack
+	; The following line is used to return from the subroutine 
+	; and should be the last line in your subroutine.
+	
 	MOV pc, lr
-
-new_line:
-	PUSH {r4-r12,lr} 	; Store any registers in the range of r4 through r12
-							; that are used in your routine.  Include lr if this
-							; routine calls another routine.
-
-	MOV r0, #13
-	BL output_character
-	MOV r0, #10
-	BL output_character
-
-	POP {r4-r12,lr}   	; Restore registers all registers preserved in the
-						; PUSH at the top of this routine from the stack.
-	mov pc, lr
 
 
 	.end
