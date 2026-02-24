@@ -312,20 +312,37 @@ read_from_push_btns:
 	MOV pc, lr
 
 illuminate_LEDs:
-	PUSH {r4-r12,lr}	; Spill registers to stack
+    PUSH {r4-r12, lr} 	; Spill registers to stack
 
-    ; need to find out what ports the leds are
-    ; load port B base address
-    MOV r1, #0x5000
+	; format
+	;   bit 0 = LED0 (PB0)
+	;   bit 1 = LED1 (PB1)
+	;   bit 2 = LED2 (PB2)
+	;   bit 3 = LED3 (PB3)
+	
+	; in decimal
+	;   0  = all OFF
+	;   1  = LED0
+	;   2  = LED1
+	;   4  = LED2
+	;   8  = LED3
+	;   3  = LED0 + LED1
+	;   5  = LED0 + LED2
+	;   7  = LED0 + LED1 + LED2
+	;   15 = all LEDs ON
+
+    ; Load Port B base address
+    MOV  r1, #0x5000
     MOVT r1, #0x4000
 
-    AND r0, r0, #0x0F ; Mask the bits for PB0-PB3
+    ; Keep only lower 4 bits (LED0–LED3)
+    AND  r0, r0, #0x0F
 
-    STR r0, [r1, #0x3FC] ; Write the value to the LED pins (PB0-3)
+    ; Write to Port B DATA register
+    STR  r0, [r1, #0x3FC]
 
-	POP {r4-r12,lr}  	; Restore registers from stack
-	MOV pc, lr
-
+    POP {r4-r12, lr}	; Restore registers from stack
+    MOV pc, lr
 illuminate_RGB_LED:
 	PUSH {r4-r12,lr}	; Spill registers to stack
 
@@ -521,7 +538,8 @@ i2s_null:
 unsigned_division:
 	PUSH {r4-r12,lr}	; Spill registers to stack
 
-          ; Your code is placed here
+    ;place holder for unsigned div
+	UDIV r0, r1, r0
 
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
@@ -529,7 +547,8 @@ unsigned_division:
 signed_division:
 	PUSH {r4-r12,lr}	; Spill registers to stack
 
-          ; Your code is placed here
+	;place holder for signed div
+	SDIV r0, r1, r0
 
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
@@ -537,7 +556,13 @@ signed_division:
 mod:
 	PUSH {r4-r12,lr}	; Spill registers to stack
 
-          ; Your code is placed here
+    ;place holder for mod
+	MOV r4, r0 ;temp divisior
+	MOV r5, r1 ;temp dividend
+	SDIV r0, r1, r0
+	MUL r0, r0, r4
+	
+	SUB r0, r5, r0
 
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
