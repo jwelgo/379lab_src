@@ -294,22 +294,21 @@ output_done:
 	mov pc, lr
 
 read_from_push_btns:
-	PUSH {r4-r12,lr}	; Spill registers to stack
+    PUSH {r4-r12, lr} 	; Spill registers to stack
 
-    ; load port E base address
-    MOV r0, #0x4000
-    MOVT r0, #0x4002
+    ; Load Port D base address
+    MOV  r1, #0x7000
+    MOVT r1, #0x4000
 
-    ; read the value of the push buttons
-    LDR r0, [r1, #0x3FC] ; Read the value of the push buttons
+    ; Read Port D data register
+    LDR  r0, [r1, #0x3FC]
 
-    ; mask the bits for PE2-PE5
-    AND r0, r0, #0x3C
+    ; Mask PD0–PD3 (Switches 2–5)
+    AND  r0, r0, #0x0F
+	;EOR  r0, r0, #0x0F     ; if switches need to be inverted
 
-    LSR r0, r0, #2 ; Shift right to align
-
-	POP {r4-r12,lr}  	; Restore registers from stack
-	MOV pc, lr
+    POP {r4-r12, lr}	; Restore registers from stack
+    MOV  pc, lr
 
 illuminate_LEDs:
     PUSH {r4-r12, lr} 	; Spill registers to stack
