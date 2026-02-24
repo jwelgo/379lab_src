@@ -98,9 +98,9 @@ restart:
 	MOV r5, #4 ; bounds of proper user input
 	MOV r6, #1
 
-	CMP r5, r9
+	CMP r9, r5
 	BGT invalid ; invalid input
-	CMP r6, r9
+	CMP r9, r6
 	BLT invalid ; invalid input
 
 	MOV r5, #1 ; check if test 1
