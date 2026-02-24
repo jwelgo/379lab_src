@@ -49,6 +49,12 @@ lab4:
 	PUSH {r4-r12,lr}	; Spill registers to stack
 
 	BL uart_init ; init uart
+	BL gpio_btn_and_LED_init ;gpio init
+
+	;clear led
+	MOV r0, #0
+	BL illuminate_RGB_LED
+	BL illuminate_LEDs
 
 	LDR r4, ptr_to_prompt_l1 ; load first prompt
 	MOV r0, r4 ; send prompt
@@ -81,6 +87,14 @@ lab4:
 	BL new_line ; new line
 
 restart:
+
+	;clear led
+	MOV r0, #0
+	BL illuminate_RGB_LED
+	BL illuminate_LEDs
+
+	; for each test we need to branch and link on equal
+
 	LDR r4, ptr_to_prompt_l7 ; load seventh prompt
 	MOV r0, r4 ; send prompt
 	BL output_string ; print prompt
@@ -105,19 +119,21 @@ restart:
 
 	MOV r5, #1 ; check if test 1
 	CMP r5, r9
-	BL read_tiva_push_button
+	BEQ read_tiva_push_button
 
 	MOV r5, #2 ; check if test 2
 	CMP r5, r9
-	BL read_from_push_btns
+	BEQ read_from_push_btns
 
 	MOV r5, #3 ; check if test 3
+	MOV r0, #15
 	CMP r5, r9
-	BL illuminate_LEDs
+	BEQ illuminate_LEDs
 
 	MOV r5, #4 ; check if test 4
+	MOV r0, #3
 	CMP r5, r9
-	BL illuminate_RGB_LED
+	BEQ illuminate_RGB_LED
 
 exit_prompt:
 	LDR r4, ptr_to_prompt_l8 ; load eighth prompt
@@ -129,8 +145,6 @@ exit_prompt:
 	MOVT r0, #0x2000 ; Load base address
 	BL read_string ; at some point load the characters we just stored into a register
 
-	MOV r0, #0x0100        ; reload address
-	MOVT r0, #0x2000
 	MOV r8, r0 ; save result in r8
 
 	MOV r7, #110
