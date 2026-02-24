@@ -621,8 +621,8 @@ skip_div:
     B signed_next           ; Skip negation
 
 negate_quotient:
-    MOV r9, 0xFFFF          ; Load Lower half of bitmask
-    MOVT r9, 0xFFFF         ; Load upperhalf of butmask
+    MOV r9, #0xFFFF          ; Load Lower half of bitmask
+    MOVT r9, #0xFFFF         ; Load upperhalf of butmask
     EOR r0, r0, r9          ; Perform one's complement
     ADD r0, r0, #1          ; Add 1 (two's complement)    
 
