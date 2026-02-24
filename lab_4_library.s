@@ -583,20 +583,40 @@ unsigned_next:
 	MOV pc, lr
 
 signed_division:
-	PUSH {r4-r12,lr}        ; Store registers r4 through r12 and lr on the						
-                            ; stack. Do NOT modify this line of code.  It 
-                            ; ensures that the return address is preserved 
-                            ; so that a proper return to the C wrapped can be 
+    PUSH {r4-r12,lr}        ; Store registers r4 through r12 and lr on the
+                            ; stack. Do NOT modify this line of code.  It
+                            ; ensures that the return address is preserved
+                            ; so that a proper return to the C wrapped can be
                             ; executed.
-			
-    ; Your code for the signed_division routine goes here.  
+
+    ; Your code for the signed_division routine goes here.
+
+    MOV r9, #0xFFFF         ; Load Lower half of bitmask
+    MOVT r9, #0xFFFF        ; Load upperhalf of butmask
 
     LSR r7, r0, #31         ; Grab sign of dividend
+    CMP r7, #0
+    BNE negate_dividend         ; Negate dividend
+    B skip_dnd                          ; skip
+
+negate_dividend:
+    EOR r0, r0, r9          ; Perform one's complement
+    ADD r0, r0, #1          ; Add 1 (two's complement)
+
+skip_dnd:
     LSR r8, r1, #31         ; Grab sign of divisor
+    CMP r8, #0
+    BNE negate_divisor          ; Negate dividend
+    B skip_div                          ; skip
 
-    BL unsigned_division    ; Call unsigned_division subroutine 
+negate_divisor:
+    EOR r1, r1, r9          ; Perform one's complement
+    ADD r1, r1, #1          ; Add 1 (two's complement)
 
-    CMP r7, r8  
+skip_div:
+    BL unsigned_division    ; Call unsigned_division subroutine
+
+    CMP r7, r8
     BNE negate_quotient     ; Negate the quotient if signs do not match,
     B signed_next           ; Skip negation
 
