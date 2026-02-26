@@ -11,10 +11,13 @@
 
 
 
-prompt:	.string "Reaction game, press space to start, click enter or sw1 when the LED turns green | First to 3 wins\r\n", 0
-player1_win_prompt: .string "Player 1 wins\r\n", 0
-player2_win_prompt: .string "Player 2 wins\r\n", 0
-end_game_prompt: .string "Game Over\r\n", 0
+prompt:	.string "Reaction game, press space to start, click enter or sw1 when the LED turns green | First to 3 wins", 0
+too_early_prompt:	.string "Too Early!", 0
+player1_win_prompt: .string "Player 1 wins", 0
+player2_win_prompt: .string "Player 2 wins", 0
+end_game_prompt: .string "Game Over", 0
+game_started_prompt: .string "Game Started!", 0
+last_key: .string "", 0
 
 player1_score: .byte 0
 player2_score: .byte 0
@@ -47,138 +50,195 @@ winner: .byte 0 ; 0 none 1 player 1 wins, 2 player 2 wins
 	.global output_string
 	.global read_character
 	.global wait
+	.global new_line
 
 ptr_to_prompt:					.word prompt
+ptr_to_too_early_prompt:			.word too_early_prompt
 ptr_to_player1_win_prompt:		.word player1_win_prompt
 ptr_to_player2_win_prompt:		.word player2_win_prompt
 ptr_to_end_game_prompt:			.word end_game_prompt
+ptr_to_game_started_prompt:     .word game_started_prompt
+ptr_to_last_key:				.word last_key
 
 ptr_to_player1_score:			.word player1_score
 ptr_to_player2_score:			.word player2_score
 ptr_to_game_state:				.word game_state
 ptr_to_winner:					.word winner
 
-lab5:								; This is your main routine which is called from
-; your C wrapper.
-	PUSH {r4-r12,lr}   		; Preserve registers to adhere to the AAPCS
-	ldr r4, ptr_to_prompt
+lab5:
+    PUSH {r4-r12, lr}
 
- 	bl uart_init
-	bl uart_interrupt_init
-	bl gpio_interrupt_init
-
-	; This is where you should implement a loop, waiting for the user to
-	; indicate if they want to end the program.
-
-	;TODO
-	; make winners be declared here instead of in handlers | move the CMP out of the handlers to increase speed
-	; move declaring too early out of handlers too to lab5 main | ie. switching led to red here instead of in handlers
-
+    ; Initialize peripherals
+    BL uart_init
+    BL uart_interrupt_init
+    BL gpio_interrupt_init
 
 game_loop:
 
-	; reset flags
-	LDR r0, ptr_to_game_state
-	MOV r1, #0
-	STR r1, [r0]
+    ; Reset game state and winner
+    LDR r0, ptr_to_game_state
+    MOV r1, #0              ; 0 = waiting to start
+    STR r1, [r0]
 
-	LDR r0, ptr_to_winner
-	MOV r1, #0
-	STR r1, [r0]
+    LDR r0, ptr_to_winner
+    MOV r1, #0
+    STR r1, [r0]
 
-	LDR r0, ptr_to_prompt
-	BL output_string
+    ; Turn off LED
+    MOV r0, #0
+    BL illuminate_RGB_LED
 
+    ; Print start prompt
+    LDR r0, ptr_to_prompt
+    BL output_string
+    BL new_line
+
+
+; WAIT FOR SPACE TO START (winner == 1)
 wait_for_start:
+    LDR r0, ptr_to_last_key
+wait_for_space:
+    LDR r1, [r0]
+    CMP r1, #32          ; ASCII space
+    BNE wait_for_space
 
-	; stay until uart handler sets winner
-	LDR r0, ptr_to_winner
-	LDR r1, [r0]
-	CMP r1, #1
-	BEQ wait_for_start
+    ; Clear last_key immediately
+    MOV r1, #0
+    STR r1, [r0]
 
-	; clear winner
-	MOV r1, #0
-	STR r1, [r0]
+    ; Set state = 1 (arming period)
+    LDR r0, ptr_to_game_state
+    MOV r1, #1
+    STR r1, [r0]
 
-	; turn off led
-	MOV r0, #0
-	BL illuminate_RGB_LED
+    ; Print "Game started"
+    LDR r0, ptr_to_game_started_prompt
+    BL output_string
+    BL new_line
 
-	; set game state to armed (1)
-	LDR r0, ptr_to_game_state
-	MOV r1, #1
-	STR r1, [r0]
+    ; 3-second delay
+    BL wait
 
-	; delay some how
-	BL wait ; wait 3 seconds
-	MOV r0, #2
-	BL illuminate_RGB_LED	; make led green to indicate armed
+    ; Clear last_key again to ignore accidental key presses during delay
+    MOV r1, #0
+    LDR r0, ptr_to_last_key
+    STR r1, [r0]
 
-	LDR r0, ptr_to_game_state
-	MOV r1, #2
-	STR r1, [r0]
+    ; ARM GAME
+    MOV r0, #2
+    BL illuminate_RGB_LED
 
+    LDR r0, ptr_to_game_state
+    MOV r1, #2
+    STR r1, [r0]
+
+    B wait_for_winner
+
+
+; WAIT FOR SOMEONE TO PRESS
 wait_for_winner:
-	; stay until uart handler sets winner
-	LDR r0, ptr_to_winner
-	LDR r1, [r0]
-	CMP r1, #0
-	BEQ wait_for_winner
 
-	CMP r1, #1
-	BEQ player1_wins
+    LDR r0, ptr_to_last_key
+    LDR r1, [r0]
+    CMP r1, #0
+    BEQ wait_for_winner
 
-	CMP r1, #2
-	BEQ player2_wins
+    ; If enter pressed player 1
+    CMP r1, #13
+    BEQ player1_wins
 
+    ; Check if pressed too early
+    LDR r2, ptr_to_game_state
+    LDR r3, [r2]
+    CMP r3, #2
+    BNE too_early
+
+    ; VALID WIN
+    CMP r1, #1
+    BEQ player1_wins
+
+    CMP r1, #2
+    BEQ player2_wins
+
+
+; TOO EARLY PRESS
+too_early:
+    MOV r0, #1              ; Red LED
+    BL illuminate_RGB_LED
+
+    LDR r0, ptr_to_too_early_prompt
+    BL output_string
+    BL new_line
+
+    B check_end
+
+; PLAYER 1 WINS
 player1_wins:
 
-	LDR r2, ptr_to_player1_score
-	LDR r3, [r2]
-	ADD r3, r3, #1
-	STRB r3, [r2]
+    MOV r0, #2              ; Green LED
+    BL illuminate_RGB_LED
 
-	LDR r0, ptr_to_player1_win_prompt
-	BL output_string
-	B check_end
+    LDR r2, ptr_to_player1_score
+    LDR r3, [r2]
+    ADD r3, r3, #1
+    STR r3, [r2]
 
+    LDR r0, ptr_to_player1_win_prompt
+    BL output_string
+    BL new_line
+
+    B check_end
+
+; PLAYER 2 WINS
 player2_wins:
 
-	LDR r2, ptr_to_player2_score
-	LDR r3, [r2]
-	ADD r3, r3, #1
-	STRB r3, [r2]
+    MOV r0, #2              ; Green LED
+    BL illuminate_RGB_LED
 
-	LDR r0, ptr_to_player2_win_prompt
-	BL output_string
+    LDR r2, ptr_to_player2_score
+    LDR r3, [r2]
+    ADD r3, r3, #1
+    STR r3, [r2]
 
+    LDR r0, ptr_to_player2_win_prompt
+    BL output_string
+    BL new_line
+
+; CHECK IF GAME OVER
 check_end:
 
-	; check if user wants to end game
-	MOV r0, #0
-	BL illuminate_RGB_LED	; turn off led
+    ; Reset winner flag
+    LDR r0, ptr_to_winner
+    MOV r1, #0
+    STR r1, [r0]
 
-	; check if someone has 3
-	LDR r2, ptr_to_player1_score
-	LDR r1, [r0]
-	CMP r1, #3
-	BEQ end_game
+    ; Check P1 score
+    LDR r2, ptr_to_player1_score
+    LDR r3, [r2]
+    CMP r3, #3
+    BEQ end_game
 
-	LDR r2, ptr_to_player2_score
-	LDR r1, [r0]
-	CMP r1, #3
-	BEQ end_game
+    ; Check P2 score
+    LDR r2, ptr_to_player2_score
+    LDR r3, [r2]
+    CMP r3, #3
+    BEQ end_game
 
-	B game_loop
+    B game_loop
 
+
+; END GAME
 end_game:
 
-	LDR r0, ptr_to_end_game_prompt
-	BL output_string
+    LDR r0, ptr_to_end_game_prompt
+    BL output_string
+    BL new_line
 
-	POP {lr}		; Restore registers to adhere to the AAPCS
-	MOV pc, lr
+    MOV r0, #0
+    BL illuminate_RGB_LED
+
+    POP {r4-r12, lr}
+    BX lr
 
 
 
@@ -206,152 +266,110 @@ uart_interrupt_init:
 
 gpio_interrupt_init:
 
-	; Your code to initialize the SW1 interrupt goes here
-	; Don't forget to follow the procedure you followed in Lab #4
-	; to initialize SW1.
+    ; Enable GPIO Port F clock
+    MOV  r0, #0xE608
+    MOVT r0, #0x400F        ; RCGCGPIO
+    LDR  r1, [r0]
+    ORR  r1, r1, #0x20
+    STR  r1, [r0]
 
-	; init RGB LED too
+    ; Base address Port F
+    MOV  r0, #0x5000
+    MOVT r0, #0x4002
 
-	; enable GPIO F
-	MOV r0, #0xE608
-	MOVT r0, #0x400F	; RCGCGPIO
-	LDR r1, [r0]
-	ORR r1, r1, #0x20	; enable port F
-	STR r1, [r0]
+    ; Unlock PF4
+    MOV  r1, #0x434B
+    MOVT r1, #0x4C4F
+    STR  r1, [r0, #0x520]   ; GPIOLOCK
+    MOV  r1, #0x10
+    STR  r1, [r0, #0x524]   ; GPIOCR
 
-	; set PF4 as input
-	MOV r0, #0x5000
-	MOVT r0, #0x4002	; base address for port F
+    MOV  r1, #0x0E          ; 0000 1110
+    STR  r1, [r0, #0x400]   ; GPIODIR
 
-	MOV r1, #0x00
-	STR r1, [r0, #0x400]	; GPIODIR
+    ; Digital enable PF1-4
+    MOV  r1, #0x1E          ; 0001 1110
+    STR  r1, [r0, #0x51C]   ; GPIODEN
 
-	MOV r1, #0x10
-	STR r1, [r0, #0x51C]	; GPIODEN
+    ; Pull-up on PF4
+    MOV  r1, #0x10
+    STR  r1, [r0, #0x510]   ; GPIOPUR
 
-	MOV r1, #0x10
-	STR r1, [r0, #0x510]	; GPIOPUR
+    ; Interrupt configuration PF4
+    MOV  r1, #0x00
+    STR  r1, [r0, #0x404]   ; GPIOIS
 
-	MOV r1, #0x00
-	STR r1, [r0, #0x404]
+    ; Single edge
+    MOV  r1, #0x00
+    STR  r1, [r0, #0x408]   ; GPIOIBE
 
-	MOV r1, #0x00
-	STR r1, [r0, #0x408]
+    ; Falling edge trigger
+    MOV  r1, #0x10
+    STR  r1, [r0, #0x40C]   ; GPIOIEV
 
-	MOV r1, #0x10
-	STR r1, [r0, #0x40C]
+    ; Clear any prior interrupt
+    MOV  r1, #0x10
+    STR  r1, [r0, #0x41C]   ; GPIOICR
 
-	MOV r1, #0x10
-	STR r1, [r0, #0x41C]
+    ; Unmask PF4 interrupt
+    MOV  r1, #0x10
+    STR  r1, [r0, #0x410]   ; GPIOIM
 
-	MOV r1, #0x10
-	STR r1, [r0, #0x410]
+    ; Enable NVIC interrupt
+    MOV  r0, #0xE100
+    MOVT r0, #0xE000        ; NVIC_EN0
 
-	MOV r0, #0xE100
-	MOVT r0, #0xE000	; NVIC_EN0
+    MOV  r1, #1
+    LSL  r1, r1, #30
+    STR  r1, [r0]
 
-	MOV r1, #1
-	LSL r1, r1, #30
-	STR r1, [r0]		; enable interrupt number 30 for GPIO F
-
-	MOV pc, lr
+    MOV  pc, lr
 
 
 UART0_Handler:
+    PUSH {r4-r12, lr}
 
-	; Your code for your UART handler goes here.
-	; Remember to preserver registers r4-r12 by pushing then popping
-	; them to & from the stack at the beginning & end of the handler
+	; storing last key now instead to move comparison away from the handler
 
-	; TODO
-	; make handler just set winner and handle declaring the winner in lab5 instead of handler to make it more consistent
+    ; Clear UART RX interrupt
+    MOV  r0, #0xC044
+    MOVT r0, #0x4000
+    MOV  r1, #0x10
+    STR  r1, [r0]
 
-	PUSH {r4-r12}
+    ; Read received character
+    MOV  r0, #0xC000
+    MOVT r0, #0x4000
+    LDR  r4, [r0]
 
-	MOV r0, #0xC044
-	MOVT r0, #0x4000	; UART0_ICR_R
-	MOV r1, #0x10
-	STR r1, [r0]		; clear the interrupt
+    ; Store character globally
+    LDR  r5, ptr_to_last_key
+    STR  r4, [r5]
 
-	MOV r0, #0xC000
-	MOVT r0, #0x4000	; UART0_DR_R
-	LDR r4, [r0]		; read the data
-
-	; check if spacebar is pressed if not end
-	CMP r4, #32
-	BNE uart_done
-
-	; load game
-	LDR r5, ptr_to_game_state
-	LDR r6, [r5]
-
-	; check if player 1 wins (keyboard)
-	CMP r6, #2
-	BEQ player1_win
-
-	CMP r6, #1
-	BEQ too_early
-
-	B uart_done
-
-player1_win:
-	LDR r7, ptr_to_winner
-	MOV r8, #1
-	STR r8, [r7]
-	B uart_done
-
-too_early:
-	;make led red
-
-
-uart_done:
-	POP {r4-r12}
-	BX lr       	; Return
-
+    POP  {r4-r12, lr}
+    BX   lr
 
 Switch_Handler:
 
-	; Your code for your UART handler goes here.
+    ; Your code for your UART handler goes here.
 	; Remember to preserver registers r4-r12 by pushing then popping
 	; them to & from the stack at the beginning & end of the handler
 
-	; TODO
-	; make handler just set winner and handle declaring the winner in lab5 instead of handler to make it more consistent
+    PUSH {r4-r12, lr}
 
-	PUSH {r4-r12}
+    ; Clear PF4 interrupt
+    MOV  r0, #0x541C
+    MOVT r0, #0x4002        ; GPIOF_ICR
+    MOV  r1, #0x10
+    STR  r1, [r0]
 
-	MOV r0, #0x541C
-	MOVT r0, #0x4002	; GPIOF_ICR
-	MOV r1, #0x10
-	STR r1, [r0]		; clear the interrupt
+    ; Set winner = 2
+    LDR  r5, ptr_to_winner
+    MOV  r6, #2
+    STR  r6, [r5]
 
-	; game
-	LDR r5, ptr_to_game_state
-	LDR r6, [r5]
-
-	; check if player 2 wins (switch)
-	CMP r6, #2
-	BEQ player2_win
-
-	CMP r6, #1
-	BEQ too_early_switch
-
-	B switch_done
-
-player2_win:
-	LDR r7, ptr_to_winner
-	MOV r8, #2
-	STR r8, [r7]
-	B switch_done
-
-too_early_switch:
-	;make led red
-	B switch_done
-
-switch_done:
-	POP {r4-r12}
-	BX lr       	; Return
-
+    POP  {r4-r12, lr}
+    BX   lr
 
 Timer_Handler:
 
