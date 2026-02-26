@@ -5,6 +5,106 @@
 	.global output_string
 	.global read_character
 	.global wait
+	.global uart_init
+	.global new_line
+
+
+uart_init:
+	PUSH {r4-r12,lr}	; Spill registers to stack
+
+    ; Enable UART0 Clock
+    MOV r4, #0xE618
+    MOVT r4, #0x400F
+    MOV r5, #1
+    STR r5, [r4]
+
+wait_uart:
+    MOV r4, #0xEA18
+    MOVT r4, #0x400F
+    LDR r6, [r4]
+    AND r6, r6, #1
+    CMP r6, #0
+    BEQ wait_uart
+
+    ; Enable GPIOA Clock
+    MOV r4, #0xE608
+    MOVT r4, #0x400F
+    MOV r5, #1
+    STR r5, [r4]
+
+wait_gpioa:
+    MOV r4, #0xEA08
+    MOVT r4, #0x400F
+    LDR r6, [r4]
+    AND r6, r6, #1
+    CMP r6, #0
+    BEQ wait_gpioa
+
+    ; Disable UART0 before configuration
+    MOV r4, #0xC030
+    MOVT r4, #0x4000
+    MOV r5, #0
+    STR r5, [r4]
+
+    ; Configure GPIOA for UART FIRST
+
+    ; Digital enable PA0, PA1
+    MOV r4, #0x451C
+    MOVT r4, #0x4000
+    LDR r6, [r4]
+    ORR r6, r6, #0x03
+    STR r6, [r4]
+
+    ; Alternate function PA0, PA1
+    MOV r4, #0x4420
+    MOVT r4, #0x4000
+    LDR r6, [r4]
+    ORR r6, r6, #0x03
+    STR r6, [r4]
+
+    ; Configure PA0, PA1 for UART
+    MOV r4, #0x452C
+    MOVT r4, #0x4000
+    LDR r6, [r4]
+    ORR r6, r6, #0x11
+    STR r6, [r4]
+
+    ; Configure UART0
+
+    ; IBRD = 8
+    MOV r4, #0xC024
+    MOVT r4, #0x4000
+    MOV r5, #8
+    STR r5, [r4]
+
+    ; FBRD = 44
+    MOV r4, #0xC028
+    MOVT r4, #0x4000
+    MOV r5, #44
+    STR r5, [r4]
+
+    ; Use system clock
+    MOV r4, #0xCFC8
+    MOVT r4, #0x4000
+    MOV r5, #0
+    STR r5, [r4]
+
+    ; 8-bit, 1 stop, no parity
+    MOV r4, #0xC02C
+    MOVT r4, #0x4000
+    MOV r5, #0x60
+    STR r5, [r4]
+
+    ; Enable UART0 (RXE | TXE | UARTEN)
+    MOV r4, #0xC030
+    MOVT r4, #0x4000
+    MOV r5, #0x301
+    STR r5, [r4]
+
+	POP {r4-r12,lr}  	; Restore registers from stack
+	MOV pc, lr
+
+
 
 output_character:
 	PUSH {r4-r12,lr} 	; Store registers r4 through r12 and lr to the
@@ -106,7 +206,9 @@ illuminate_RGB_LED:
 wait:
 	PUSH {r4-r12,lr}	; Spill registers to stack
 
-	MOV r4, #3 ; 3 sec??
+
+    MOV r4, #0xB71
+    MOVT r4, #0x2E8
 	MOV r5, #0
 
 wait_loop:
@@ -119,7 +221,22 @@ wait_loop:
 	MOV pc, lr
 
 
-	.end
 
+new_line:
+	PUSH {r4-r12,lr} 	; Store any registers in the range of r4 through r12
+							; that are used in your routine.  Include lr if this
+							; routine calls another routine.
+
+	MOV r0, #13
+	BL output_character
+	MOV r0, #10
+	BL output_character
+
+	POP {r4-r12,lr}   	; Restore registers all registers preserved in the
+						; PUSH at the top of this routine from the stack.
+	mov pc, lr
+
+
+	.end
 
 
