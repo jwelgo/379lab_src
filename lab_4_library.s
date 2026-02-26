@@ -121,7 +121,7 @@ init_gpio:
     MOVT r0, #0x400F ; RCGCGPIO Register Address
 
     LDR r1, [r0] ; Read the current value of RCGCGPIO
-    ORR r1, r1, #0x32
+    ORR r1, r1, #0x32\A
     STR r1, [r0] ; Write back the updated value to RCGCGPIO
 
 wait_gpio:
@@ -130,8 +130,8 @@ wait_gpio:
 
 gpio_wait_loop:
     LDR r1, [r0] ; Read the current value of RCGCGPIO
-    AND r1, r1, #0x32 ; Check if the clock for port is enabled
-    CMP r1, #0x32 ; If not enabled, wait
+    AND r1, r1, #0x3A ; Check if the clock for port is enabled
+    CMP r1, #0x3A ; If not enabled, wait
     BNE gpio_wait_loop
 
     ; else keep going
@@ -160,18 +160,18 @@ gpio_wait_loop:
     MOV r1, #0x0F ; enable PB0-3
     STR r1, [r0, #0x51C]
 
-    ; port D init
-    ; switch 2 is pin 3
-    ; switch 5 is pin 0
-;    MOV r0, #0x7000
-;    MOVT r0, #0x4000 ; PORT D Base Address
+    ; PORT D init
 
-;    MOV r1, #0x0F ; Set the direction of the pin
-;    STR r1, [r0, #0x51C] ; Write to the GPIODIR register
+    MOV r0, #0x7000
+    MOVT r0, #0x4000        ; PORT D base 
 
-    ; digital
-;    MOV r1, #0x0F ; enable
-;    STR r1, [r0, #0x510]
+    ; Set
+    MOV r1, #0x00
+    STR r1, [r0, #0x400]    ; GPIODIR
+
+    ; Enable digital
+    MOV r1, #0x0F
+    STR r1, [r0, #0x51C]    ; GPIODEN
 
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
