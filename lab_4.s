@@ -120,20 +120,41 @@ restart:
 	MOV r5, #1 ; check if test 1
 	CMP r5, r9
 	BEQ read_tiva_push_button
+    B skip_read_tiva_push_button_test
 
+read_tiva_push_button_test:
+    BL read_tiva_push_button
+
+skip_read_tiva_push_button_test:
 	MOV r5, #2 ; check if test 2
 	CMP r5, r9
-	BEQ read_from_push_btns
+	BEQ push_btns_test
+    B skip_push_btns_test
 
+push_btns_test:
+    BL read_from_push_btns
+
+skip_push_btns_test:
 	MOV r5, #3 ; check if test 3
 	MOV r0, #15
 	CMP r5, r9
 	BEQ illuminate_LEDs
+    B skip_illuminate_LEDs_test
 
+illuminate_LEDs_test:
+    BL illuminate_LEDs
+
+skip_illuminate_LEDs_test:
 	MOV r5, #4 ; check if test 4
 	MOV r0, #3
 	CMP r5, r9
-	BEQ illuminate_RGB_LED
+	BEQ illuminate_RGB_LED_test
+    B skip_illuminate_RGB_LED_test
+
+illuminate_RGB_LED_test:
+    BL illuminate_RGB_LED
+
+skip_illuminate_RGB_LED_test:
 
 exit_prompt:
 	LDR r4, ptr_to_prompt_l8 ; load eighth prompt
