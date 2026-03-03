@@ -66,6 +66,12 @@ ptr_to_game_state:				.word game_state
 ptr_to_winner:					.word winner
 
 lab5:
+
+	; updated
+	; now the interupts change the last_key variable keyboard just sends the last key sw1 just puts 2
+	; The main game loop just checks the last key and the game state to determine if someone won or if it was too early
+	; Too early only fires now if the player clicked their scoring key
+
     PUSH {r4-r12, lr}
 
     ; Initialize peripherals
@@ -97,6 +103,7 @@ game_loop:
 ; WAIT FOR SPACE TO START (winner == 1)
 wait_for_start:
     LDR r0, ptr_to_last_key
+
 wait_for_space:
     LDR r1, [r0]
     CMP r1, #32          ; ASCII space
@@ -139,26 +146,39 @@ wait_for_space:
 wait_for_winner:
 
     LDR r0, ptr_to_last_key
+
+poll_key:
     LDR r1, [r0]
     CMP r1, #0
-    BEQ wait_for_winner
+	BEQ poll_key
 
-    ; If enter pressed player 1
-    CMP r1, #13
-    BEQ player1_wins
+	MOV r2, #0
+	STR r2, [r0]    ; Clear last_key immediately
 
-    ; Check if pressed too early
-    LDR r2, ptr_to_game_state
-    LDR r3, [r2]
-    CMP r3, #2
-    BNE too_early
+	; ignore space during game
+	CMP r1, #32
+	BEQ wait_for_winner
 
-    ; VALID WIN
-    CMP r1, #1
-    BEQ player1_wins
+	; load game state
+	LDR r2, ptr_to_game_state
+	LDR r3, [r2]
 
-    CMP r1, #2
-    BEQ player2_wins
+	; if not armed, too early
+	CMP r3, #2
+	BNE too_early
+
+	; if game armed
+
+	; player 1
+	CMP r1, #13		; Enter key
+	BEQ player1_wins
+
+	; player 2
+	CMP r1, #2
+	BEQ player2_wins
+
+	B wait_for_winner
+
 
 
 ; TOO EARLY PRESS
@@ -364,7 +384,7 @@ Switch_Handler:
     STR  r1, [r0]
 
     ; Set winner = 2
-    LDR  r5, ptr_to_winner
+    LDR  r5, ptr_to_last_key
     MOV  r6, #2
     STR  r6, [r5]
 
