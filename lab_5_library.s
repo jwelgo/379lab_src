@@ -7,6 +7,7 @@
 	.global wait
 	.global uart_init
 	.global new_line
+	.global too_early
 
 
 uart_init:
@@ -206,16 +207,18 @@ illuminate_RGB_LED:
 wait:
 	PUSH {r4-r12,lr}	; Spill registers to stack
 
-
-    MOV r4, #0xB71
-    MOVT r4, #0x2E8
+	MOV r4, r0
 	MOV r5, #0
 
 wait_loop:
-	NOP
+	LDR r6, [r1]
+	CMP r6, #13
+	BEQ too_early
+	CMP r6, #2
+	BEQ too_early
 	ADD r5, r5, #1
-	CMP r4, r5
-	BLE wait_loop
+	CMP r5, r4
+	BLT wait_loop
 
 	POP {r4-r12,lr}  	; Restore registers from stack
 	MOV pc, lr
@@ -238,5 +241,4 @@ new_line:
 
 
 	.end
-
 
