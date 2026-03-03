@@ -21,7 +21,7 @@ last_key: .string "", 0
 
 player1_score: .byte 0
 player2_score: .byte 0
-game_state: .byte 0 ; 0 waiting, 1 armed, 2 go
+;game_state: .byte 0 ; 0 waiting, 1 armed, 2 go
 winner: .byte 0 ; 0 none 1 player 1 wins, 2 player 2 wins
 
 
@@ -51,6 +51,7 @@ winner: .byte 0 ; 0 none 1 player 1 wins, 2 player 2 wins
 	.global read_character
 	.global wait
 	.global new_line
+	.global too_early
 
 ptr_to_prompt:					.word prompt
 ptr_to_too_early_prompt:			.word too_early_prompt
@@ -62,7 +63,7 @@ ptr_to_last_key:				.word last_key
 
 ptr_to_player1_score:			.word player1_score
 ptr_to_player2_score:			.word player2_score
-ptr_to_game_state:				.word game_state
+;ptr_to_game_state:				.word game_state
 ptr_to_winner:					.word winner
 
 lab5:
@@ -82,9 +83,9 @@ lab5:
 game_loop:
 
     ; Reset game state and winner
-    LDR r0, ptr_to_game_state
-    MOV r1, #0              ; 0 = waiting to start
-    STR r1, [r0]
+    ; Game state is now just r10
+    MOV r10, #0              ; 0 = waiting to start
+    ;STR r1, [r0]
 
     LDR r0, ptr_to_winner
     MOV r1, #0
@@ -111,12 +112,13 @@ wait_for_space:
 
     ; Clear last_key immediately
     MOV r1, #0
+    MOVT r1, #0
     STR r1, [r0]
 
     ; Set state = 1 (arming period)
-    LDR r0, ptr_to_game_state
-    MOV r1, #1
-    STR r1, [r0]
+    ;LDR r0, ptr_to_game_state
+    MOV r10, #1
+    ;STR r1, [r0]
 
     ; Print "Game started"
     LDR r0, ptr_to_game_started_prompt
@@ -124,10 +126,14 @@ wait_for_space:
     BL new_line
 
     ; 3-second delay
+    MOV r0, #0x86A0
+    MOVT r0, #0x0015
+    LDR r1, ptr_to_last_key
     BL wait
 
     ; Clear last_key again to ignore accidental key presses during delay
     MOV r1, #0
+    MOVT r1, #0
     LDR r0, ptr_to_last_key
     STR r1, [r0]
 
@@ -135,9 +141,9 @@ wait_for_space:
     MOV r0, #2
     BL illuminate_RGB_LED
 
-    LDR r0, ptr_to_game_state
-    MOV r1, #2
-    STR r1, [r0]
+    ;LDR r0, ptr_to_game_state
+   	MOV r10, #2
+    ;STR r1, [r0]
 
     B wait_for_winner
 
@@ -160,12 +166,8 @@ poll_key:
 	BEQ wait_for_winner
 
 	; load game state
-	LDR r2, ptr_to_game_state
-	LDR r3, [r2]
-
-	; if not armed, too early
-	CMP r3, #2
-	BNE too_early
+	;LDR r2, ptr_to_game_state
+	;LDR r3, [r2]
 
 	; if game armed
 
@@ -195,7 +197,10 @@ too_early:
 ; PLAYER 1 WINS
 player1_wins:
 
-    MOV r0, #2              ; Green LED
+	CMP r10, #2
+	BNE too_early
+
+    MOV r0, #4              ; Green LED
     BL illuminate_RGB_LED
 
     LDR r2, ptr_to_player1_score
@@ -212,7 +217,10 @@ player1_wins:
 ; PLAYER 2 WINS
 player2_wins:
 
-    MOV r0, #2              ; Green LED
+	CMP r10, #2
+	BNE too_early
+
+    MOV r0, #4              ; Green LED
     BL illuminate_RGB_LED
 
     LDR r2, ptr_to_player2_score
