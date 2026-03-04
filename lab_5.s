@@ -138,7 +138,7 @@ wait_for_space:
     STR r1, [r0]
 
     ; ARM GAME
-    MOV r0, #2
+    MOV r0, #4
     BL illuminate_RGB_LED
 
     ;LDR r0, ptr_to_game_state
@@ -185,12 +185,40 @@ poll_key:
 
 ; TOO EARLY PRESS
 too_early:
-    MOV r0, #1              ; Red LED
-    BL illuminate_RGB_LED
 
     LDR r0, ptr_to_too_early_prompt
     BL output_string
     BL new_line
+
+    MOV r0, #1             
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #1             
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #1             
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
 
     B check_end
 
@@ -203,6 +231,7 @@ player1_wins:
     MOV r0, #4              ; Green LED
     BL illuminate_RGB_LED
 
+    ; increment player score TODO FIX THIS IT DOES NOT STORE
     LDR r2, ptr_to_player1_score
     LDR r3, [r2]
     ADD r3, r3, #1
@@ -223,6 +252,7 @@ player2_wins:
     MOV r0, #4              ; Green LED
     BL illuminate_RGB_LED
 
+    ; increment player score TODO FIX THIS IT DOES NOT STORE
     LDR r2, ptr_to_player2_score
     LDR r3, [r2]
     ADD r3, r3, #1
