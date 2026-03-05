@@ -3,38 +3,42 @@
 	.global prompt
 	.global mydata
 
-prompt:	.string "Your prompt with instructions is place here", 0
+prompt:	.string "GAME GAME GAME use wasd to move, score points by hitting numbers", 0xA, 0xD
+		.string "If you hit the walls you lose!", 0xA, 0xD
+		.string "Every 5 seconds the game speeds up with a 20 second time limit", 0xA, 0xD
 last_key: .string "", 0
 direction:  .word 0
 paused:     .word 0
 timer_flag: .word 0
-board:  .string "      Score: 0      ", 0xA, 0xD  
-        .string " -------------------- ", 0xA, 0xD
+player_x:	.word 10 ; which character
+player_y:	.word 10 ; which line
+score_line:	.string "      Score: 0      ", 0xA, 0xD, 0x0
+board:  .string " -------------------- ", 0xA, 0xD
+        .string "|                    |", 0xA, 0xD
+        .string "|               1    |", 0xA, 0xD
+        .string "|                    |", 0xA, 0xD
+        .string "|    9               |", 0xA, 0xD
+        .string "|                    |", 0xA, 0xD
+        .string "|                    |", 0xA, 0xD
+        .string "|               5    |", 0xA, 0xD
+        .string "|                    |", 0xA, 0xD
+        .string "|                    |", 0xA, 0xD
+        .string "|   4     *          |", 0xA, 0xD
+        .string "|                    |", 0xA, 0xD
+        .string "|                    |", 0xA, 0xD
+        .string "|              3     |", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
+        .string "|  2              7  |", 0xA, 0xD
+        .string "|        8           |", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string "|                    |", 0xA, 0xD
-        .string " -------------------- ", 0x0
+        .string "|                6   |", 0xA, 0xD
+        .string " -------------------- ", 0xA, 0xD, 0x0
 
 
 	.text
-	
+
 	.global uart_interrupt_init
     .global gpio_interrupt_init
 	.global UART0_Handler
@@ -46,19 +50,19 @@ board:  .string "      Score: 0      ", 0xA, 0xD
 	.global output_string			; This is from your Lab #4 Library
 	.global uart_init					; This is from your Lab #4 Library
 	.global lab6
-	
+
 ptr_to_prompt:		.word prompt
 ptr_to_last_key:	.word last_key
 ptr_to_board:       .word board
+ptr_to_score_line:	.word score_line
 ptr_to_direction:   .word direction
 ptr_to_paused:      .word paused
 ptr_to_timer_flag:  .word timer_flag
 
-lab6:								; This is your main routine which is called from 
-; your C wrapper.  
+lab6:								; This is your main routine which is called from
+; your C wrapper.
 	PUSH {r4-r12,lr}   		; Preserve registers to adhere to the AAPCS
 	ldr r4, ptr_to_prompt
-	ldr r5, ptr_to_mydata
 
  	bl uart_init
     bl gpio_interrupt_init
@@ -67,6 +71,9 @@ lab6:								; This is your main routine which is called from
 
     LDR r0, ptr_to_prompt
     BL output_string
+
+	LDR r0, ptr_to_score_line
+	BL output_string
 
     LDR r0, ptr_to_board
     BL output_string
@@ -86,7 +93,7 @@ main_loop:
     LDR r2, ptr_to_paused
     LDR r3, [r2]
 
-    EORR r3, r3, #1
+    EOR r3, r3, #1
     STR r3, [r2]
 
     B clear_key
@@ -108,13 +115,38 @@ check_w:
     B clear_key
 
 check_a:
-	
- 
+
+	CMP r1, #97
+	BNE check_s
+
+	LDR r2, ptr_to_direction
+	MOV r3, #2
+	STR r3, [r2]
+	B clear_key
+
+check_s:
+
+	CMP r1, #115
+	BNE check_d
+
+	LDR r2, ptr_to_direction
+	MOV r3, #3
+	STR r3, [r2]
+	B clear_key
+
+check_d:
+
+	CMP r1, #100
+	BNE check_timer
+
+	LDR r2, ptr_to_direction
+	MOV r3, #3
+	STR r3, [r2]
 
 clear_key:
 
-    MOV r1, #0
-    STR r1, [r0]
+	MOV r1, #0
+
 
 check_timer:
 
@@ -129,6 +161,14 @@ check_timer:
     STR r1, [r0]
 
     ; movement code
+    ; idea for now
+    ; move by looking at the character one ahead in direction
+    ; if it is a number add it to score
+    ; if it is a | or - end game
+    ; somehow use the y cordinate to determine which line of board to look at
+    ; use the x cordinate to determine which character in the line to look at
+    ; to detect game over if at least one coordinate is 0 or 20 game over
+    BL Timer_Handler
 
     B main_loop
 
@@ -310,20 +350,20 @@ Timer_init:
     STR r1, [r0]
 
 Timer_Handler:
-	
+
 	; Your code for your Timer handler goes here.  It is not needed for
 	; Lab #5, but will be used in Lab #6.  It is referenced here because
 	; the interrupt enabled startup code has declared Timer_Handler.
-	; This will allow you to not have to redownload startup code for 
+	; This will allow you to not have to redownload startup code for
 	; Lab #6.  Instead, you can use the same startup code as for Lab #5.
-	; Remember to preserver registers r4-r12 by pushing then popping 
+	; Remember to preserver registers r4-r12 by pushing then popping
 	; them to & from the stack at the beginning & end of the handler.
 
 	BX lr       	; Return
 
 
-simple_read_character: 
-	
+simple_read_character:
+
 	MOV pc, lr	; Return
 
 	.end
