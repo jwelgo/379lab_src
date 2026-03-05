@@ -19,10 +19,10 @@ end_game_prompt: .string "Game Over", 0
 game_started_prompt: .string "Game Started!", 0
 last_key: .string "", 0
 
-player1_score: .byte 0
-player2_score: .byte 0
-;game_state: .byte 0 ; 0 waiting, 1 armed, 2 go
-winner: .byte 0 ; 0 none 1 player 1 wins, 2 player 2 wins
+player1_score: .word 0
+player2_score: .word 0
+;game_state: .byte 0 ; 0 waiting, 1 armed, 2 go i acc had this as byte when it should have been word but i already switched it for r10 so sticking with that
+winner: .word 0 ; 0 none 1 player 1 wins, 2 player 2 wins
 
 
 
@@ -190,7 +190,7 @@ too_early:
     BL output_string
     BL new_line
 
-    MOV r0, #1             
+    MOV r0, #1
     BL illuminate_RGB_LED
     MOV r0, #0x86A0
     MOVT r0, #0x0005
@@ -201,7 +201,7 @@ too_early:
     MOVT r0, #0x0005
     BL wait
 
-    MOV r0, #1             
+    MOV r0, #1
     BL illuminate_RGB_LED
     MOV r0, #0x86A0
     MOVT r0, #0x0005
@@ -212,7 +212,7 @@ too_early:
     MOVT r0, #0x0005
     BL wait
 
-    MOV r0, #1             
+    MOV r0, #1
     BL illuminate_RGB_LED
     MOV r0, #0x86A0
     MOVT r0, #0x0005
@@ -228,18 +228,45 @@ player1_wins:
 	CMP r10, #2
 	BNE too_early
 
-    MOV r0, #4              ; Green LED
-    BL illuminate_RGB_LED
-
     ; increment player score TODO FIX THIS IT DOES NOT STORE
-    LDR r2, ptr_to_player1_score
-    LDR r3, [r2]
-    ADD r3, r3, #1
-    STR r3, [r2]
+    ;LDR r2, ptr_to_player1_score
+    ;LDR r3, [r2]
+    ADD r11, r11, #1
+    ;STR r3, [r2]
 
     LDR r0, ptr_to_player1_win_prompt
     BL output_string
     BL new_line
+
+    MOV r0, #4
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #4
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #4
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
 
     B check_end
 
@@ -249,18 +276,45 @@ player2_wins:
 	CMP r10, #2
 	BNE too_early
 
-    MOV r0, #4              ; Green LED
-    BL illuminate_RGB_LED
-
     ; increment player score TODO FIX THIS IT DOES NOT STORE
-    LDR r2, ptr_to_player2_score
-    LDR r3, [r2]
-    ADD r3, r3, #1
-    STR r3, [r2]
+    ;LDR r2, ptr_to_player2_score
+    ;LDR r3, [r2]
+    ADD r12, r12, #1
+    ;STR r3, [r2]
 
     LDR r0, ptr_to_player2_win_prompt
     BL output_string
     BL new_line
+
+    MOV r0, #4
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #4
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #4
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
 
 ; CHECK IF GAME OVER
 check_end:
@@ -271,15 +325,15 @@ check_end:
     STR r1, [r0]
 
     ; Check P1 score
-    LDR r2, ptr_to_player1_score
-    LDR r3, [r2]
-    CMP r3, #3
+    ;LDR r2, ptr_to_player1_score
+    ;LDR r3, [r2]
+    CMP r11, #3
     BEQ end_game
 
     ; Check P2 score
-    LDR r2, ptr_to_player2_score
-    LDR r3, [r2]
-    CMP r3, #3
+    ;LDR r2, ptr_to_player2_score
+    ;LDR r3, [r2]
+    CMP r12, #3
     BEQ end_game
 
     B game_loop
@@ -291,12 +345,72 @@ end_game:
     LDR r0, ptr_to_end_game_prompt
     BL output_string
     BL new_line
+    BL new_line
+    BL new_line
+    BL new_line
 
+    MOV r0, #1
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #2
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #3
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+
+    MOV r0, #4
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #5
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+    MOV r0, #0
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
+
+    MOV r0, #6
+    BL illuminate_RGB_LED
+    MOV r0, #0x86A0
+    MOVT r0, #0x0005
+    BL wait
     MOV r0, #0
     BL illuminate_RGB_LED
 
     POP {r4-r12, lr}
-    BX lr
+    B lab5
 
 
 
