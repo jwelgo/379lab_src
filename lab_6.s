@@ -6,7 +6,11 @@
 prompt:	.string "GAME GAME GAME use wasd to move, score points by hitting numbers", 0xA, 0xD
 		.string "If you hit the walls you lose!", 0xA, 0xD
 		.string "Every 5 seconds the game speeds up with a 20 second time limit", 0xA, 0xD
+
+clear:  .string 0x1B, 0x5B, 0x32, 0x4A, 0x1B, 0x5B, 0x48
+
 last_key: .string "", 0
+
 direction:  .word 0
 paused:     .word 0
 timer_flag: .word 0
@@ -14,7 +18,9 @@ player_x:	.word 10 ; which character
 player_y:	.word 10 ; which line
 score:      .word 0
 game_time:  .word 20
+
 score_line:	.string "      Score: 0      ", 0xA, 0xD, 0x0
+
 board:  .string " -------------------- ", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
         .string "|               1    |", 0xA, 0xD
@@ -54,6 +60,7 @@ board:  .string " -------------------- ", 0xA, 0xD
 	.global lab6
 
 ptr_to_prompt:		.word prompt
+ptr_to_clear: 		.word clear
 ptr_to_last_key:	.word last_key
 ptr_to_board:       .word board
 ptr_to_score_line:	.word score_line
@@ -94,6 +101,7 @@ main_loop:
 
     ; pause
     CMP r1, #2
+    ; poll / change direction
     BNE check_w
 
     LDR r2, ptr_to_paused
@@ -225,7 +233,7 @@ check_wall:
     BEQ game_over
     CMP r4, #20
     BEQ game_over
-    
+
     CMP r5, #0
     BEQ game_over
     CMP r5, #0
@@ -237,8 +245,15 @@ check_wall:
     LDR r0, ptr_to_player_y
     STR r5, [r0]
 
-    ;update board
+;clear_board:
+	LDR r0, ptr_to_clear
+    BL output_string
+
+;update board
 update_board:
+	LDR r0, ptr_to_score_line
+	BL output_string    ; reprint score
+
     LDR r7, ptr_to_board
 
     ; compute offset
@@ -475,6 +490,7 @@ Timer_Handler:
 	; Lab #6.  Instead, you can use the same startup code as for Lab #5.
 	; Remember to preserver registers r4-r12 by pushing then popping
 	; them to & from the stack at the beginning & end of the handler.
+	PUSH {r4-r12, lr}
     MOV r0, #0x0024
     MOVT r0, #0x4003
     MOV r1, #1
@@ -484,6 +500,7 @@ Timer_Handler:
     MOV r1, #1
     STR r1, [r0]
 
+	POP {r4-r12, lr}
 	BX lr       	; Return
 
 
