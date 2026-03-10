@@ -12,6 +12,8 @@ paused:     .word 0
 timer_flag: .word 0
 player_x:	.word 10 ; which character
 player_y:	.word 10 ; which line
+score:      .word 0
+game_time:  .word 20
 score_line:	.string "      Score: 0      ", 0xA, 0xD, 0x0
 board:  .string " -------------------- ", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
@@ -58,6 +60,10 @@ ptr_to_score_line:	.word score_line
 ptr_to_direction:   .word direction
 ptr_to_paused:      .word paused
 ptr_to_timer_flag:  .word timer_flag
+ptr_to_player_x:    .word player_x
+ptr_to_player_y:    .word player_y
+ptr_to_score:       .word score
+ptr_to_game_time:   .word game_time
 
 lab6:								; This is your main routine which is called from
 ; your C wrapper.
@@ -140,7 +146,7 @@ check_d:
 	BNE check_timer
 
 	LDR r2, ptr_to_direction
-	MOV r3, #3
+	MOV r3, #0
 	STR r3, [r2]
 
 clear_key:
@@ -168,12 +174,123 @@ check_timer:
     ; somehow use the y cordinate to determine which line of board to look at
     ; use the x cordinate to determine which character in the line to look at
     ; to detect game over if at least one coordinate is 0 or 20 game over
-    BL Timer_Handler
+    BL move_player
 
     B main_loop
 
 	POP {lr}		; Restore registers to adhere to the AAPCS
 	MOV pc, lr
+
+
+move_player:
+    PUSH {r4-r12,lr}
+
+    LDR r0, ptr_to_paused
+    LDR r1, [r0]
+    CMP r1, #1
+    BEQ done_move
+
+    LDR r0, ptr_to_player_x
+    LDR r4, [r0]
+
+    LDR r0, ptr_to_player_y
+    LDR r5, [r0]
+
+    LDR r0, ptr_to_direction
+    LDR r6, [r0]
+
+    ; check right
+    CMP r6, #0
+    BNE check_up
+    ADD r4, r4, #1
+    B check_wall
+
+check_up:
+    CMP r6, #1
+    BNE check_left
+    SUB r5, r5, #1
+    B check_wall
+
+check_left:
+    CMP r6, #2
+    BNE check_down
+    SUB r4, r4, #1
+    B check_wall
+
+check_down:
+    ADD r5, r5, #1
+
+check_wall:
+    CMP r4, #0
+    BEQ game_over
+    CMP r4, #20
+    BEQ game_over
+    
+    CMP r5, #0
+    BEQ game_over
+    CMP r5, #0
+    BEQ game_over
+
+    LDR r0, ptr_to_player_x
+    STR r4, [r0]
+
+    LDR r0, ptr_to_player_y
+    STR r5, [r0]
+
+    ;update board
+update_board:
+    LDR r7, ptr_to_board
+
+    ; compute offset
+    MOV r8, r5
+    MOV r9, #22 ; 22 chars
+    MUL r8, r8, r9
+
+    ; offset += x
+    ADD r8, r8, r4
+
+    ; address of new pos
+    ADD r10, r7, r8
+
+    ; read character at pos
+    LDRB r11, [r10]
+
+    ; check if number in between 1 and 9
+    CMP r11, #49 ; 1
+    BLT not_number
+    CMP r11, #57 ; 9
+    BGT not_number
+
+    ; convert to number
+    SUB r11, r11, #48
+
+    ; add to score
+    LDR r0, ptr_to_score
+    LDR r1, [r0]
+    ADD r1, r1, r11
+    STR r1, [r0]
+
+    MOV r11, #32
+    STRB r11, [r10]
+
+not_number:
+    MOV r11, #42
+    STRB r11, [r10]
+
+    ; reprint
+    LDR r0, ptr_to_board
+    BL output_string
+
+
+done_move:
+
+    POP {r4-r12,lr}
+    BX lr
+
+game_over:
+
+    ; game over
+    B done_move
 
 
 uart_interrupt_init:
@@ -358,6 +475,14 @@ Timer_Handler:
 	; Lab #6.  Instead, you can use the same startup code as for Lab #5.
 	; Remember to preserver registers r4-r12 by pushing then popping
 	; them to & from the stack at the beginning & end of the handler.
+    MOV r0, #0x0024
+    MOVT r0, #0x4003
+    MOV r1, #1
+    STR r1, [r0]
+
+    LDR r0, ptr_to_timer_flag
+    MOV r1, #1
+    STR r1, [r0]
 
 	BX lr       	; Return
 
