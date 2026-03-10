@@ -448,38 +448,52 @@ Timer_init:
     ORR r1, r1, #1
     STR r1, [r0]
 
-    MOV r0, #0x000C
-    MOVT r0, #0x4003
-    MOV r1, #0
-    STR r1, [r0]
+wait_timer:
+	MOV r0, #0xEA04
+	MOVT r0, #0x400F
+	LDR r1, [r0]
+	AND r1, r1, #1
+	CMP r1, #1
+	BNE wait_timer
 
-    MOV r0, #0x0
-    MOVT r0, #0x4003
-    MOV r1, #0
-    STR r1, [r0]
+	MOV r0, #0x000C
+	MOV r0, #0x4003
+	MOV r1, #0
+	STR r1, [r0]
 
-    MOV r0, #0x0004
-    MOVT r0, #0x4003
-    MOV r1, #2
-    STR r1, [r0]
+	MOV r0, #0x0000
+	MOVT r0, #0x4003
+	MOV r1, #0
+	STR r1, [r0]
 
-    MOV r0, #0x0028
-    MOVT r0, #0x4003
+	MOV r0, #0x0004
+	MOVT r0, #0x4003
+	MOV r1, #2
+	STR r1, [r0]
 
-    MOV r1, #0x2400
-    MOVT r1, #0x00F4
+	MOV r0, #0x0028
+	MOVT r0, #0x4003
 
-    STR r1, [r0]
+	MOV r1, #0x2400
+	MOVT r1, #0x00F4
 
-    MOV r0, #0x0018
-    MOVT r0, #0x4003
-    MOV r1, #1
-    STR r1, [r0]
+	STR r1, [r0]
 
-    MOV r0, #0x00C
-    MOVT r0, #0x4003
-    MOV r1, #1
-    STR r1, [r0]
+	MOV r0, #0xE100
+	MOVT r0, #0xE000
+
+	MOV r1, #1
+	LSL r1, r1, #19
+
+	STR r1, [r0]
+
+	MOV r0, #0x000C
+	MOVT r0, #0x4003
+
+	MOV r1, #1
+	STR r1, [r0]
+
+
 
 Timer_Handler:
 
