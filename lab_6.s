@@ -20,7 +20,7 @@ player_y:	.word 10 ; which line
 old_player_x: .word 10
 old_player_y: .word 10
 score:      .word 0
-game_time:  .word 20
+game_time:  .word 40 ; doubled because we are on half clock cycke
 
 score_line:	.string "      Score: 0      ", 0xA, 0xD, 0x0
 
@@ -526,12 +526,12 @@ wait_timer:
     MOV r1, #2
     STR r1, [r0]
 
-    ; load value 16 mil
-    MOV r0, #0x0028
-    MOVT r0, #0x4003
-    MOV r1, #0x2400
-    MOVT r1, #0x00F4
-    STR r1, [r0]
+    ; load value 8 mil
+	MOV r0, #0x0028
+	MOVT r0, #0x4003
+	MOV r1, #0x1200
+	MOVT r1, #0x007A
+	STR r1, [r0]
 
     ; enable timeout interrupt
     MOV r0, #0x0018
@@ -564,19 +564,35 @@ Timer_Handler:
 	; Lab #6.  Instead, you can use the same startup code as for Lab #5.
 	; Remember to preserver registers r4-r12 by pushing then popping
 	; them to & from the stack at the beginning & end of the handler.
-	PUSH {r4-r12, lr}
+    PUSH {r4-r12, lr}
+
+    ; clear timer interrupt
     MOV r0, #0x0024
     MOVT r0, #0x4003
     MOV r1, #1
     STR r1, [r0]
 
+    ; set timer flag for main loop
     LDR r0, ptr_to_timer_flag
     MOV r1, #1
     STR r1, [r0]
 
-	POP {r4-r12, lr}
-	BX lr       	; Return
+    ; decrement game_time
+    LDR r0, ptr_to_game_time
+    LDR r1, [r0]
+    SUB r1, r1, #1
+    STR r1, [r0]
 
+    ; check if time is up
+    CMP r1, #0
+    BNE done_timer
+
+    ; trigger game over
+    BL game_over
+
+done_timer:
+    POP {r4-r12, lr}
+    BX lr
 
 simple_read_character:
 
