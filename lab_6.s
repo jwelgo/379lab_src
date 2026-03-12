@@ -5,17 +5,20 @@
 
 prompt:	.string "GAME GAME GAME use wasd to move, score points by hitting numbers", 0xA, 0xD
 		.string "If you hit the walls you lose!", 0xA, 0xD
-		.string "Every 5 seconds the game speeds up with a 20 second time limit", 0xA, 0xD
+		.string "20 second time limit", 0xA, 0xD
+		.string "Press SW1 to start!", 0xA, 0xD
 
 clear:  .string 0x1B, 0x5B, 0x32, 0x4A, 0x1B, 0x5B, 0x48
 
 last_key: .string "", 0
 
 direction:  .word 0
-paused:     .word 0
+paused:     .word 1
 timer_flag: .word 0
 player_x:	.word 10 ; which character
 player_y:	.word 10 ; which line
+old_player_x: .word 10
+old_player_y: .word 10
 score:      .word 0
 game_time:  .word 20
 
@@ -31,7 +34,7 @@ board:  .string " -------------------- ", 0xA, 0xD
         .string "|               5    |", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
-        .string "|   4     *          |", 0xA, 0xD
+        .string "|   4                |", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
         .string "|              3     |", 0xA, 0xD
@@ -43,6 +46,13 @@ board:  .string " -------------------- ", 0xA, 0xD
         .string "|                    |", 0xA, 0xD
         .string "|                6   |", 0xA, 0xD
         .string " -------------------- ", 0xA, 0xD, 0x0
+
+game_over_text:
+    .string 0xA,0xD
+    .string "=+=+=+=+=+=+=+=+=+=+=",0xA,0xD
+    .string "      GAME OVER     ",0xA,0xD
+    .string "=+=+=+=+=+=+=+=+=+=+=",0xA,0xD
+    .string 0x0
 
 
 	.text
@@ -63,12 +73,15 @@ ptr_to_prompt:		.word prompt
 ptr_to_clear: 		.word clear
 ptr_to_last_key:	.word last_key
 ptr_to_board:       .word board
+ptr_to_game_over_text: .word game_over_text
 ptr_to_score_line:	.word score_line
 ptr_to_direction:   .word direction
 ptr_to_paused:      .word paused
 ptr_to_timer_flag:  .word timer_flag
 ptr_to_player_x:    .word player_x
 ptr_to_player_y:    .word player_y
+ptr_to_old_player_x: .word old_player_x
+ptr_to_old_player_y: .word old_player_y
 ptr_to_score:       .word score
 ptr_to_game_time:   .word game_time
 
@@ -98,19 +111,6 @@ main_loop:
 
     CMP r1, #0
     BEQ check_timer
-
-    ; pause
-    CMP r1, #2
-    ; poll / change direction
-    BNE check_w
-
-    LDR r2, ptr_to_paused
-    LDR r3, [r2]
-
-    EOR r3, r3, #1
-    STR r3, [r2]
-
-    B clear_key
 
 ; check each key and change direction
 ; w up 1
@@ -181,7 +181,6 @@ check_timer:
     ; if it is a | or - end game
     ; somehow use the y cordinate to determine which line of board to look at
     ; use the x cordinate to determine which character in the line to look at
-    ; to detect game over if at least one coordinate is 0 or 20 game over
     BL move_player
 
     B main_loop
@@ -204,6 +203,12 @@ move_player:
     LDR r0, ptr_to_player_y
     LDR r5, [r0]
 
+    LDR r0, ptr_to_old_player_x
+	STR r4, [r0]
+
+	LDR r0, ptr_to_old_player_y
+	STR r5, [r0]
+
     LDR r0, ptr_to_direction
     LDR r6, [r0]
 
@@ -211,72 +216,89 @@ move_player:
     CMP r6, #0
     BNE check_up
     ADD r4, r4, #1
-    B check_wall
+    B move_done
 
 check_up:
     CMP r6, #1
     BNE check_left
     SUB r5, r5, #1
-    B check_wall
+    B move_done
 
 check_left:
     CMP r6, #2
     BNE check_down
     SUB r4, r4, #1
-    B check_wall
+    B move_done
 
 check_down:
     ADD r5, r5, #1
 
-check_wall:
-    CMP r4, #0
-    BEQ game_over
-    CMP r4, #20
-    BEQ game_over
-
-    CMP r5, #0
-    BEQ game_over
-    CMP r5, #0
-    BEQ game_over
-
+move_done:
     LDR r0, ptr_to_player_x
     STR r4, [r0]
 
     LDR r0, ptr_to_player_y
     STR r5, [r0]
 
-;clear_board:
-	LDR r0, ptr_to_clear
-    BL output_string
 
 ;update board
 update_board:
-	LDR r0, ptr_to_score_line
-	BL output_string    ; reprint score
+
+	;clear_board:
+	LDR r0, ptr_to_clear
+    BL output_string
+
+    ; reprint score
+    LDR r0, ptr_to_score_line
+    BL output_string
 
     LDR r7, ptr_to_board
 
-    ; compute offset
+	; erase OLD player position
+    LDR r0, ptr_to_old_player_y
+    LDR r1, [r0]
+
+    MOV r2, #24
+    MUL r1, r1, r2
+
+    LDR r0, ptr_to_old_player_x
+    LDR r3, [r0]
+
+    ADD r1, r1, r3
+    ADD r1, r1, #1
+
+    ADD r1, r7, r1
+
+    MOV r2, #32      ; space
+    STRB r2, [r1]
+
+	; compute NEW position
     MOV r8, r5
-    MOV r9, #22 ; 22 chars
+    MOV r9, #24
     MUL r8, r8, r9
 
-    ; offset += x
     ADD r8, r8, r4
+    ADD r8, r8, #1
 
-    ; address of new pos
     ADD r10, r7, r8
 
-    ; read character at pos
+	; check if number
     LDRB r11, [r10]
 
-    ; check if number in between 1 and 9
-    CMP r11, #49 ; 1
+	; check if wall
+	CMP r11, #45
+	BEQ game_over
+
+	CMP r11, #124
+	BEQ game_over
+
+    CMP r11, #49
     BLT not_number
-    CMP r11, #57 ; 9
+
+    CMP r11, #57
     BGT not_number
 
-    ; convert to number
+    ; convert ASCII -> number
     SUB r11, r11, #48
 
     ; add to score
@@ -285,17 +307,37 @@ update_board:
     ADD r1, r1, r11
     STR r1, [r0]
 
+    ; remove number from board
     MOV r11, #32
     STRB r11, [r10]
 
 not_number:
+
+	; draw player
     MOV r11, #42
     STRB r11, [r10]
 
-    ; reprint
+
+	; print board
+
+	; load score
+	LDR r0, ptr_to_score
+	LDR r1, [r0]
+
+	; convert to ASCII
+	ADD r1, r1, #48
+
+	; load score_line
+	LDR r2, ptr_to_score_line
+
+	; offset to digit in string
+	ADD r2, r2, #13
+
+	; store ASCII digit
+	STRB r1, [r2]
+
     LDR r0, ptr_to_board
     BL output_string
-
 
 done_move:
 
@@ -304,9 +346,20 @@ done_move:
 
 game_over:
 
-    ; game over
-    B done_move
+    ; set paused = 1
+    LDR r0, ptr_to_paused
+    MOV r1, #1
+    STR r1, [r0]
 
+    ; clear screen
+    LDR r0, ptr_to_clear
+    BL output_string
+
+    ; print game over text
+    LDR r0, ptr_to_game_over_text
+    BL output_string
+
+    B done_move
 
 uart_interrupt_init:
 
@@ -429,19 +482,18 @@ Switch_Handler:
     STR  r1, [r0]
 
     ; Set pause
-    LDR  r5, ptr_to_last_key
-    MOV  r6, #2
-    STR  r6, [r5]
+    LDR r0, ptr_to_paused
+    LDR r1, [r0]
+
+    EOR r1, r1, #1
+    STR r1, [r0]
 
     POP  {r4-r12, lr}
     BX   lr
 
 Timer_init:
 
-    ; enable timer clock
-    ; 16MHZ clock
-    ; counts down from 16 mil
-
+    ; enable Timer0 clock
     MOV r0, #0xE604
     MOVT r0, #0x400F
     LDR r1, [r0]
@@ -449,50 +501,58 @@ Timer_init:
     STR r1, [r0]
 
 wait_timer:
-	MOV r0, #0xEA04
-	MOVT r0, #0x400F
-	LDR r1, [r0]
-	AND r1, r1, #1
-	CMP r1, #1
-	BNE wait_timer
+    MOV r0, #0xEA04
+    MOVT r0, #0x400F
+    LDR r1, [r0]
+    AND r1, r1, #1
+    CMP r1, #1
+    BNE wait_timer
 
-	MOV r0, #0x000C
-	MOV r0, #0x4003
-	MOV r1, #0
-	STR r1, [r0]
+    ; disable timer
+    MOV r0, #0x000C
+    MOVT r0, #0x4003
+    MOV r1, #0
+    STR r1, [r0]
 
-	MOV r0, #0x0000
-	MOVT r0, #0x4003
-	MOV r1, #0
-	STR r1, [r0]
+    ; 32 bit timer
+    MOV r0, #0x0000
+    MOVT r0, #0x4003
+    MOV r1, #0
+    STR r1, [r0]
 
-	MOV r0, #0x0004
-	MOVT r0, #0x4003
-	MOV r1, #2
-	STR r1, [r0]
+    ; periodic mode
+    MOV r0, #0x0004
+    MOVT r0, #0x4003
+    MOV r1, #2
+    STR r1, [r0]
 
-	MOV r0, #0x0028
-	MOVT r0, #0x4003
+    ; load value 16 mil
+    MOV r0, #0x0028
+    MOVT r0, #0x4003
+    MOV r1, #0x2400
+    MOVT r1, #0x00F4
+    STR r1, [r0]
 
-	MOV r1, #0x2400
-	MOVT r1, #0x00F4
+    ; enable timeout interrupt
+    MOV r0, #0x0018
+    MOVT r0, #0x4003
+    MOV r1, #1
+    STR r1, [r0]
 
-	STR r1, [r0]
+    ; enable interrupt
+    MOV r0, #0xE100
+    MOVT r0, #0xE000
+    MOV r1, #1
+    LSL r1, r1, #19
+    STR r1, [r0]
 
-	MOV r0, #0xE100
-	MOVT r0, #0xE000
+    ; enable timer
+    MOV r0, #0x000C
+    MOVT r0, #0x4003
+    MOV r1, #1
+    STR r1, [r0]
 
-	MOV r1, #1
-	LSL r1, r1, #19
-
-	STR r1, [r0]
-
-	MOV r0, #0x000C
-	MOVT r0, #0x4003
-
-	MOV r1, #1
-	STR r1, [r0]
-
+    MOV pc, lr
 
 
 Timer_Handler:
