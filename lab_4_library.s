@@ -583,3 +583,41 @@ new_line:
 
 
 	.end
+
+
+
+// Bonus code
+
+
+int2str_i:
+    PUSH {r4-r12, lr}
+
+    ; r0 = input integer (single digit, 0-9)
+    
+    ; Clamp to 0-9
+    CMP r0, #0
+    MOVLT r0, #0
+    CMP r0, #9
+    MOVGT r0, #9
+
+    ADD r0, r0, #48         ; Convert digit to ASCII ('0' = 48)
+
+    POP {r4-r12, lr}
+    MOV pc, lr
+
+
+str2int_i:
+    PUSH {r4-r12, lr}
+
+    ; r0 = single ASCII character ('0'-'9')
+
+    ; Clamp to valid ASCII digit range
+    CMP r0, #48             ; Below '0'?
+    MOVLT r0, #48
+    CMP r0, #57             ; Above '9'?
+    MOVGT r0, #57
+
+    SUB r0, r0, #48         ; Convert ASCII to integer
+
+    POP {r4-r12, lr}
+    MOV pc, lr
