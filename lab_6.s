@@ -20,7 +20,7 @@ player_y:	.word 10 ; which line
 old_player_x: .word 10
 old_player_y: .word 10
 score:      .word 0
-game_time:  .word 40 ; doubled because we are on half clock cycke
+game_time:  .word 90 ; doubled because we are on half clock cycke
 
 score_line:	.string "      Score: 0      ", 0xA, 0xD, 0x0
 
@@ -67,6 +67,8 @@ game_over_text:
 	.global read_string				; This is from your Lab #4 Library
 	.global output_string			; This is from your Lab #4 Library
 	.global uart_init					; This is from your Lab #4 Library
+	.global int2str_i
+	.global str2int_i
 	.global lab6
 
 ptr_to_prompt:		.word prompt
@@ -526,11 +528,12 @@ wait_timer:
     MOV r1, #2
     STR r1, [r0]
 
-    ; load value 8 mil
+    ; load value 8 mil (007A1200)
+    ; load value 4 mil (003D0900)
 	MOV r0, #0x0028
 	MOVT r0, #0x4003
-	MOV r1, #0x1200
-	MOVT r1, #0x007A
+	MOV r1, #0x0900
+	MOVT r1, #0x003D
 	STR r1, [r0]
 
     ; enable timeout interrupt
